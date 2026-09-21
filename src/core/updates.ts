@@ -52,6 +52,18 @@ export function recordUpdateVisit(
   return {...state,[updateScopeKey(techId)]:now};
 }
 
+export function recordGlobalUpdateVisit(
+  state:UpdateVisitState,
+  now=new Date().toISOString()
+):UpdateVisitState{
+  if(!validIsoTimestamp(now)) return state;
+  const next={...state,[GLOBAL_SCOPE]:now};
+  for(const techId of new Set(updates.map(entry=>entry.techId))){
+    next[techId]=now;
+  }
+  return next;
+}
+
 export function updatesForTechnology(techId?:string):TechnologyUpdate[]{
   return updates
     .filter(entry=>!techId||entry.techId===techId)
@@ -64,8 +76,8 @@ export function newUpdatesSince(
   lastVisit?:string
 ):TechnologyUpdate[]{
   if(!validIsoTimestamp(lastVisit)) return entries.slice();
-  const cutoff=Date.parse(lastVisit);
-  return entries.filter(entry=>Date.parse(entry.publishedAt+"T23:59:59Z")>cutoff);
+  const visitedDate=new Date(lastVisit).toISOString().slice(0,10);
+  return entries.filter(entry=>entry.publishedAt>visitedDate);
 }
 
 export function latestVersionFor(techId:string){
