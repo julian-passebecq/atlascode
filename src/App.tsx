@@ -45,6 +45,7 @@ import {
   PaneKey,
   PaneState,
   saveWorkspaces,
+  scopeWorkspaceToTechnologies,
   visiblePaneKey,
   Workspace,
   workspaceTitle
@@ -103,11 +104,24 @@ export function App({
     openTarget(result.techId,result.mode,focusKind?result.id:undefined,focusKind);
   };
 
+  const selectTrack=(track:TrackId|"all")=>{
+    setSelectedTrack(track);
+    setCompareConcept(undefined);
+    if(track==="all") return;
+
+    const allowed=technologyIdsForTrack(track);
+    const defaultTechId=trackById.get(track)?.defaultTechId || [...allowed][0];
+    if(!defaultTechId) return;
+
+    mutate(workspace=>scopeWorkspaceToTechnologies(workspace,allowed,defaultTechId));
+  };
+
   const addWorkspace=()=>{
     const next=createWorkspace();
     setWorkspaces(current=>[...current,next]);
     setActiveId(next.id);
     setActivePane("left");
+    setSelectedTrack("all");
     setReviewOpen(false);
     setUpdatesOpen(false);
     setCompareConcept(undefined);
@@ -122,6 +136,7 @@ export function App({
       const replacement=next[Math.max(0,index-1)];
       setActiveId(replacement.id);
       setActivePane(visiblePaneKey(replacement.split,"left"));
+      setSelectedTrack(track=>trackScopeForTechnology(track,replacement.left.techId));
       setReviewOpen(false);
       setUpdatesOpen(false);
       setCompareConcept(undefined);
@@ -184,6 +199,7 @@ export function App({
               onClick={()=>{
                 setActiveId(workspace.id);
                 setActivePane("left");
+                setSelectedTrack(track=>trackScopeForTechnology(track,workspace.left.techId));
                 setReviewOpen(false);
                 setUpdatesOpen(false);
                 setCompareConcept(undefined);
@@ -258,7 +274,7 @@ export function App({
               type="button"
               className={selectedTrack==="all"?"trackItem selected":"trackItem"}
               aria-pressed={selectedTrack==="all"}
-              onClick={()=>{setSelectedTrack("all");setCompareConcept(undefined);}}
+              onClick={()=>selectTrack("all")}
             >
               <span>All</span>
               <Badge appearance="outline">{catalog.length}</Badge>
@@ -270,7 +286,7 @@ export function App({
                 type="button"
                 className={selectedTrack===track.id?"trackItem selected":"trackItem"}
                 aria-pressed={selectedTrack===track.id}
-                onClick={()=>{setSelectedTrack(track.id);setCompareConcept(undefined);}}
+                onClick={()=>selectTrack(track.id)}
                 title={track.description}
               >
                 <span>{track.label}</span>
