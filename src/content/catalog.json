@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "contentVersion": "0.8.0",
+  "contentVersion": "0.9.0",
   "reviewedAt": "2026-09-21",
   "technologies": [
     {
@@ -104,6 +104,12 @@
           "signature": "zip(*iterables, strict=False)",
           "whatFor": "Traverse aligned iterables.",
           "example": "for name, score in zip(names, scores): ..."
+        },
+        {
+          "name": "contextlib.contextmanager",
+          "signature": "@contextmanager",
+          "whatFor": "Build a context manager around setup/cleanup.",
+          "example": "@contextmanager\\ndef resource(): ..."
         }
       ],
       "practices": [
@@ -112,6 +118,12 @@
           "prompt": "Keep the first occurrence of each event_id.",
           "pattern": "seen set + output list",
           "reveal": "Maintain a set for membership and append only unseen IDs."
+        },
+        {
+          "title": "Stream a huge file",
+          "prompt": "Process millions of records without loading all rows into memory.",
+          "pattern": "generator",
+          "reveal": "Yield or iterate records incrementally instead of returning one giant list."
         }
       ]
     },
@@ -218,6 +230,12 @@
           "signature": "grouped.agg(new_col=('source','func'))",
           "whatFor": "Named aggregation.",
           "example": "df.groupby('k').agg(total=('v','sum'))"
+        },
+        {
+          "name": "DataFrame.merge",
+          "signature": "left.merge(right, ..., validate=...)",
+          "whatFor": "Join DataFrames with optional cardinality validation.",
+          "example": "orders.merge(customers,on='customer_id',validate='m:1')"
         }
       ],
       "practices": [
@@ -226,6 +244,12 @@
           "prompt": "Keep one newest order per customer.",
           "pattern": "sort + drop_duplicates",
           "reveal": "Sort by timestamp descending, then drop_duplicates on customer_id."
+        },
+        {
+          "title": "Join without row explosion",
+          "prompt": "Orders are many-to-one with customers and row count must stay stable.",
+          "pattern": "merge(validate='m:1')",
+          "reveal": "Declare expected cardinality and inspect unmatched rows."
         }
       ]
     },
@@ -331,6 +355,12 @@
           "signature": "pl.scan_parquet(source)",
           "whatFor": "Create a LazyFrame.",
           "example": "pl.scan_parquet('*.parquet')"
+        },
+        {
+          "name": "with_columns",
+          "signature": "frame.with_columns(*exprs)",
+          "whatFor": "Add or replace columns through expressions.",
+          "example": "df.with_columns(pl.col('x').cast(pl.Int64))"
         }
       ],
       "practices": [
@@ -339,6 +369,12 @@
           "prompt": "Read large Parquet and keep latest event.",
           "pattern": "lazy scan + ordered unique",
           "reveal": "Scan lazily, filter early, sort by event time, then keep one row per user."
+        },
+        {
+          "title": "Large Parquet transform",
+          "prompt": "Filter and aggregate many files with minimal I/O.",
+          "pattern": "scan_parquet + lazy expressions",
+          "reveal": "Use a LazyFrame, filter/select early, collect at the boundary."
         }
       ]
     },
@@ -443,6 +479,12 @@
           "signature": "Window.partitionBy(...).orderBy(...)",
           "whatFor": "Define analytical windows.",
           "example": "Window.partitionBy('id').orderBy('ts')"
+        },
+        {
+          "name": "DataFrame.repartition",
+          "signature": "df.repartition(n?, *cols)",
+          "whatFor": "Redistribute data into new partitions.",
+          "example": "df.repartition('customer_id')"
         }
       ],
       "practices": [
@@ -451,6 +493,12 @@
           "prompt": "One key owns 40% of rows.",
           "pattern": "diagnose skew + salt if needed",
           "reveal": "Confirm skew first, then consider salting or a different aggregation plan."
+        },
+        {
+          "title": "Repeated expensive branch",
+          "prompt": "Two downstream reports reuse the same costly cleaned DataFrame.",
+          "pattern": "cache + unpersist",
+          "reveal": "Cache the reused intermediate, trigger reuse, then unpersist."
         }
       ]
     },
@@ -544,6 +592,12 @@
           "signature": "Window.partitionBy(...).orderBy(...)",
           "whatFor": "Define partitioned ordered windows.",
           "example": "Window.partitionBy('id').orderBy(F.col('ts').desc())"
+        },
+        {
+          "name": "DataFrame.join",
+          "signature": "df.join(other, on=..., how=...)",
+          "whatFor": "Join Spark DataFrames using explicit join semantics.",
+          "example": "source.join(target,on='id',how='left_anti')"
         }
       ],
       "practices": [
@@ -552,6 +606,12 @@
           "prompt": "Keep only the newest record per primary key.",
           "pattern": "Window + row_number",
           "reveal": "Partition by the business key, order by sequence/timestamp descending, then keep row_number = 1."
+        },
+        {
+          "title": "Find missing target keys",
+          "prompt": "Keep source rows whose IDs do not exist in target.",
+          "pattern": "left_anti join",
+          "reveal": "Use a left anti join rather than joining and filtering null right columns."
         }
       ]
     },
@@ -644,6 +704,12 @@
           "signature": "@task(retries=...)",
           "whatFor": "Declare a Python task.",
           "example": "@task(retries=3)"
+        },
+        {
+          "name": "expand",
+          "signature": "task.expand(arg=upstream)",
+          "whatFor": "Create mapped task instances at runtime.",
+          "example": "process.expand(day=partitions())"
         }
       ],
       "practices": [
@@ -652,6 +718,12 @@
           "prompt": "Rerun one day safely.",
           "pattern": "data interval + idempotency",
           "reveal": "Parameterize writes by the logical interval and make them idempotent."
+        },
+        {
+          "title": "Runtime list of partitions",
+          "prompt": "An upstream discovery task returns a variable list of dates to process.",
+          "pattern": "dynamic task mapping",
+          "reveal": "Return the dates, then expand the processing task over them."
         }
       ]
     },
@@ -754,6 +826,12 @@
           "signature": "source('source','table')",
           "whatFor": "Reference declared raw sources.",
           "example": "{{ source('raw','events') }}"
+        },
+        {
+          "name": "is_incremental",
+          "signature": "is_incremental()",
+          "whatFor": "Branch SQL logic only during incremental execution.",
+          "example": "{% if is_incremental() %} ... {% endif %}"
         }
       ],
       "practices": [
@@ -762,6 +840,12 @@
           "prompt": "Source can revise 48 hours.",
           "pattern": "incremental lookback",
           "reveal": "Use a safety window and merge on a stable unique key."
+        },
+        {
+          "title": "Repeated currency conversion",
+          "prompt": "Many models repeat the same cents-to-decimal SQL.",
+          "pattern": "macro",
+          "reveal": "Extract the mechanical SQL expression into a small reusable macro."
         }
       ]
     },
@@ -868,6 +952,12 @@
           "signature": "LAG(expr) OVER (...)",
           "whatFor": "Read the previous row.",
           "example": "lag(status) over (partition by id order by ts)"
+        },
+        {
+          "name": "COALESCE",
+          "signature": "COALESCE(a,b,...)",
+          "whatFor": "Return the first non-null expression.",
+          "example": "COALESCE(discount,0)"
         }
       ],
       "practices": [
@@ -876,6 +966,12 @@
           "prompt": "Find gaps between user events.",
           "pattern": "LAG + timestamp difference",
           "reveal": "Use LAG(event_ts) partitioned by user and compare timestamps."
+        },
+        {
+          "title": "Paid vs refunded revenue",
+          "prompt": "Create several measures at the same customer grain.",
+          "pattern": "conditional aggregation",
+          "reveal": "Group once and use CASE inside SUM for each measure."
         }
       ]
     },
@@ -983,6 +1079,12 @@
           "signature": "COPY (query) TO path (FORMAT PARQUET)",
           "whatFor": "Export query results.",
           "example": "copy (...) to 'x.parquet' (format parquet)"
+        },
+        {
+          "name": "EXPLAIN ANALYZE",
+          "signature": "EXPLAIN ANALYZE query",
+          "whatFor": "Execute and inspect query operators/timing.",
+          "example": "EXPLAIN ANALYZE SELECT ..."
         }
       ],
       "practices": [
@@ -991,6 +1093,12 @@
           "prompt": "Aggregate partitioned Parquet without ingestion.",
           "pattern": "read_parquet + early filter",
           "reveal": "Query the glob directly and filter before aggregation."
+        },
+        {
+          "title": "CSV repeatedly queried",
+          "prompt": "A cleaned CSV query will be reused many times.",
+          "pattern": "COPY query to Parquet",
+          "reveal": "Materialize the cleaned query result as compressed Parquet."
         }
       ]
     },
@@ -1084,6 +1192,12 @@
           "signature": "DESCRIBE HISTORY table",
           "whatFor": "Inspect Delta commits.",
           "example": "describe history silver.orders"
+        },
+        {
+          "name": "replaceWhere",
+          "signature": "writer.option('replaceWhere', predicate)",
+          "whatFor": "Overwrite only data matching a deterministic predicate.",
+          "example": "option('replaceWhere', \"event_date='2026-09-21'\")"
         }
       ],
       "practices": [
@@ -1092,6 +1206,12 @@
           "prompt": "Ignore older late updates.",
           "pattern": "MERGE + ordering guard",
           "reveal": "Update only when the incoming sequence/timestamp is newer."
+        },
+        {
+          "title": "Retry one failed daily partition",
+          "prompt": "Rerunning must not duplicate already written data.",
+          "pattern": "predicate overwrite",
+          "reveal": "Replace exactly the logical date partition instead of appending."
         }
       ]
     },
@@ -1189,18 +1309,36 @@
       ],
       "apis": [
         {
-          "name": "Core surface",
-          "signature": "QUALIFY, UNNEST, SAFE_CAST, partition pruning",
-          "whatFor": "High-value syntax and concepts to recall first.",
-          "example": "QUALIFY, UNNEST, SAFE_CAST, partition pruning"
+          "name": "QUALIFY",
+          "signature": "QUALIFY boolean_expression",
+          "whatFor": "Filter after window functions are evaluated.",
+          "example": "QUALIFY ROW_NUMBER() OVER (...) = 1"
+        },
+        {
+          "name": "UNNEST",
+          "signature": "UNNEST(array_expression)",
+          "whatFor": "Expand repeated array values into rows.",
+          "example": "CROSS JOIN UNNEST(items) AS item"
+        },
+        {
+          "name": "SAFE_CAST",
+          "signature": "SAFE_CAST(expr AS type)",
+          "whatFor": "Return NULL rather than fail invalid casts.",
+          "example": "SAFE_CAST(raw_id AS INT64)"
         }
       ],
       "practices": [
         {
-          "title": "Recognize the right tool",
-          "prompt": "Which part of the core surface matches the problem?",
-          "pattern": "identify the primitive",
-          "reveal": "Start from the smallest relevant primitive, then expand to a full pattern."
+          "title": "Nested order lines",
+          "prompt": "Orders contain an array of item structs. Compute revenue by SKU.",
+          "pattern": "UNNEST + aggregate",
+          "reveal": "UNNEST items first, compute line revenue, then group by SKU."
+        },
+        {
+          "title": "Latest customer snapshot",
+          "prompt": "Keep the latest record per customer without a wrapper CTE.",
+          "pattern": "ROW_NUMBER + QUALIFY",
+          "reveal": "Use ROW_NUMBER over customer_id ordered by updated_at descending and QUALIFY = 1."
         }
       ]
     },
@@ -1298,18 +1436,36 @@
       ],
       "apis": [
         {
-          "name": "Core surface",
-          "signature": "QUALIFY, VARIANT, FLATTEN, TRY_CAST",
-          "whatFor": "High-value syntax and concepts to recall first.",
-          "example": "QUALIFY, VARIANT, FLATTEN, TRY_CAST"
+          "name": "FLATTEN",
+          "signature": "FLATTEN(INPUT => expr)",
+          "whatFor": "Expand arrays/objects from VARIANT values.",
+          "example": "LATERAL FLATTEN(INPUT => payload:items)"
+        },
+        {
+          "name": "QUALIFY",
+          "signature": "QUALIFY predicate",
+          "whatFor": "Filter rows after analytical windows.",
+          "example": "QUALIFY ROW_NUMBER() OVER (...) = 1"
+        },
+        {
+          "name": "TRY_TO_NUMBER",
+          "signature": "TRY_TO_NUMBER(expr [, format])",
+          "whatFor": "Convert dirty numeric text without failing the statement.",
+          "example": "TRY_TO_NUMBER(raw_amount, 18, 2)"
         }
       ],
       "practices": [
         {
-          "title": "Recognize the right tool",
-          "prompt": "Which part of the core surface matches the problem?",
-          "pattern": "identify the primitive",
-          "reveal": "Start from the smallest relevant primitive, then expand to a full pattern."
+          "title": "Flatten nested items",
+          "prompt": "Extract one row per item from a VARIANT order payload.",
+          "pattern": "LATERAL FLATTEN",
+          "reveal": "Flatten payload:items and cast item.value fields to stable types."
+        },
+        {
+          "title": "Safe landing conversion",
+          "prompt": "Some numeric strings are invalid but the load should continue.",
+          "pattern": "TRY conversion + quality check",
+          "reveal": "Use TRY_TO_NUMBER, then measure rows where the result is NULL."
         }
       ]
     },
@@ -1406,18 +1562,36 @@
       ],
       "apis": [
         {
-          "name": "Core surface",
-          "signature": "TOP, APPLY, temp tables, TRY_CONVERT",
-          "whatFor": "High-value syntax and concepts to recall first.",
-          "example": "TOP, APPLY, temp tables, TRY_CONVERT"
+          "name": "OUTER APPLY",
+          "signature": "left_input OUTER APPLY table_expression",
+          "whatFor": "Run a correlated table expression while preserving left rows.",
+          "example": "OUTER APPLY (SELECT TOP (1) ...) x"
+        },
+        {
+          "name": "TRY_CONVERT",
+          "signature": "TRY_CONVERT(type, expression)",
+          "whatFor": "Convert invalid input to NULL rather than failing.",
+          "example": "TRY_CONVERT(date, raw_date)"
+        },
+        {
+          "name": "STRING_AGG",
+          "signature": "STRING_AGG(expression, separator)",
+          "whatFor": "Concatenate grouped values.",
+          "example": "STRING_AGG(name, ', ')"
         }
       ],
       "practices": [
         {
-          "title": "Recognize the right tool",
-          "prompt": "Which part of the core surface matches the problem?",
-          "pattern": "identify the primitive",
-          "reveal": "Start from the smallest relevant primitive, then expand to a full pattern."
+          "title": "Latest order per customer",
+          "prompt": "Return every customer and their newest order, including customers with no orders.",
+          "pattern": "OUTER APPLY + TOP (1)",
+          "reveal": "Correlate an ordered TOP (1) subquery through OUTER APPLY."
+        },
+        {
+          "title": "Reusable heavy intermediate",
+          "prompt": "A procedure reuses the same grouped result three times.",
+          "pattern": "Temp table + index",
+          "reveal": "Materialize into #temp and index the join key if repeated use justifies it."
         }
       ]
     },
@@ -1515,18 +1689,36 @@
       ],
       "apis": [
         {
-          "name": "Core surface",
-          "signature": "ON CONFLICT, DISTINCT ON, JSONB, EXPLAIN ANALYZE",
-          "whatFor": "High-value syntax and concepts to recall first.",
-          "example": "ON CONFLICT, DISTINCT ON, JSONB, EXPLAIN ANALYZE"
+          "name": "ON CONFLICT",
+          "signature": "INSERT ... ON CONFLICT (...) DO ...",
+          "whatFor": "Implement native upsert against a unique constraint.",
+          "example": "ON CONFLICT (id) DO UPDATE SET ..."
+        },
+        {
+          "name": "EXPLAIN ANALYZE",
+          "signature": "EXPLAIN (ANALYZE, BUFFERS) query",
+          "whatFor": "Inspect the actual execution plan and buffer activity.",
+          "example": "EXPLAIN (ANALYZE, BUFFERS) SELECT ..."
+        },
+        {
+          "name": "JSONB operators",
+          "signature": "-> / ->> / #>>",
+          "whatFor": "Read JSONB values as JSON or text paths.",
+          "example": "payload #>> '{customer,id}'"
         }
       ],
       "practices": [
         {
-          "title": "Recognize the right tool",
-          "prompt": "Which part of the core surface matches the problem?",
-          "pattern": "identify the primitive",
-          "reveal": "Start from the smallest relevant primitive, then expand to a full pattern."
+          "title": "Idempotent event sink",
+          "prompt": "Load events keyed by event_id without duplicate inserts.",
+          "pattern": "Unique key + ON CONFLICT",
+          "reveal": "Create a unique constraint and use DO NOTHING or DO UPDATE according to semantics."
+        },
+        {
+          "title": "Slow filtered aggregation",
+          "prompt": "A query became slow as orders grew.",
+          "pattern": "EXPLAIN ANALYZE + BUFFERS",
+          "reveal": "Inspect the real scan/aggregate plan before proposing an index."
         }
       ]
     },
@@ -1611,18 +1803,36 @@
       ],
       "apis": [
         {
-          "name": "Core surface",
-          "signature": "ON DUPLICATE KEY, JSON_EXTRACT, window functions",
-          "whatFor": "High-value syntax and concepts to recall first.",
-          "example": "ON DUPLICATE KEY, JSON_EXTRACT, window functions"
+          "name": "ROW_NUMBER",
+          "signature": "ROW_NUMBER() OVER (...)",
+          "whatFor": "Rank rows within a partition.",
+          "example": "ROW_NUMBER() OVER (PARTITION BY id ORDER BY ts DESC)"
+        },
+        {
+          "name": "JSON_EXTRACT",
+          "signature": "JSON_EXTRACT(json_doc, path)",
+          "whatFor": "Read values from JSON documents.",
+          "example": "JSON_EXTRACT(payload, '$.customer.id')"
+        },
+        {
+          "name": "EXPLAIN ANALYZE",
+          "signature": "EXPLAIN ANALYZE query",
+          "whatFor": "Inspect actual query execution.",
+          "example": "EXPLAIN ANALYZE SELECT ..."
         }
       ],
       "practices": [
         {
-          "title": "Recognize the right tool",
-          "prompt": "Which part of the core surface matches the problem?",
-          "pattern": "identify the primitive",
-          "reveal": "Start from the smallest relevant primitive, then expand to a full pattern."
+          "title": "Latest complete status row",
+          "prompt": "Return every column from the newest status per customer.",
+          "pattern": "ROW_NUMBER",
+          "reveal": "Rank by updated_at descending inside customer partitions and keep rn=1."
+        },
+        {
+          "title": "Dirty event payload",
+          "prompt": "Extract JSON amount values before aggregation.",
+          "pattern": "JSON extraction + validation",
+          "reveal": "Extract the path, cast/validate it, and profile malformed rows."
         }
       ]
     },
@@ -1716,18 +1926,36 @@
       ],
       "apis": [
         {
-          "name": "Core surface",
-          "signature": "Pydantic, Depends, response models, HTTPException",
-          "whatFor": "High-value syntax and concepts to recall first.",
-          "example": "Pydantic, Depends, response models, HTTPException"
+          "name": "Depends",
+          "signature": "Depends(callable)",
+          "whatFor": "Inject request-scoped or reusable dependencies.",
+          "example": "session: Session = Depends(get_session)"
+        },
+        {
+          "name": "BackgroundTasks",
+          "signature": "background_tasks.add_task(func, *args)",
+          "whatFor": "Run small same-process work after the response.",
+          "example": "background_tasks.add_task(send_email, order_id)"
+        },
+        {
+          "name": "response_model",
+          "signature": "@app.get(..., response_model=Model)",
+          "whatFor": "Declare and filter the public response contract.",
+          "example": "@app.get('/orders/{id}', response_model=OrderOut)"
         }
       ],
       "practices": [
         {
-          "title": "Recognize the right tool",
-          "prompt": "Which part of the core surface matches the problem?",
-          "pattern": "identify the primitive",
-          "reveal": "Start from the smallest relevant primitive, then expand to a full pattern."
+          "title": "Database-backed route",
+          "prompt": "Use a DB session without global mutable state.",
+          "pattern": "Depends + yielded session",
+          "reveal": "Inject the session with Depends and close it through the dependency lifecycle."
+        },
+        {
+          "title": "Confirmation email",
+          "prompt": "Return an HTTP response before a small email task finishes.",
+          "pattern": "BackgroundTasks",
+          "reveal": "Schedule the small same-process task after committing the request work."
         }
       ]
     },
@@ -1822,18 +2050,36 @@
       ],
       "apis": [
         {
-          "name": "Core surface",
-          "signature": "Deployment, Service, probes, requests and limits",
-          "whatFor": "High-value syntax and concepts to recall first.",
-          "example": "Deployment, Service, probes, requests and limits"
+          "name": "kubectl get",
+          "signature": "kubectl get RESOURCE [-n namespace]",
+          "whatFor": "List current Kubernetes resources.",
+          "example": "kubectl get pods -n data"
+        },
+        {
+          "name": "kubectl describe",
+          "signature": "kubectl describe RESOURCE name",
+          "whatFor": "Inspect desired/current state and recent events.",
+          "example": "kubectl describe pod api-abc"
+        },
+        {
+          "name": "kubectl logs",
+          "signature": "kubectl logs POD [-c container]",
+          "whatFor": "Read container logs.",
+          "example": "kubectl logs deploy/api"
         }
       ],
       "practices": [
         {
-          "title": "Recognize the right tool",
-          "prompt": "Which part of the core surface matches the problem?",
-          "pattern": "identify the primitive",
-          "reveal": "Start from the smallest relevant primitive, then expand to a full pattern."
+          "title": "Slow-starting API",
+          "prompt": "The application needs 45 seconds to initialize and liveness keeps restarting it.",
+          "pattern": "startupProbe + readiness/liveness",
+          "reveal": "Use startupProbe to protect initialization, readiness for traffic and liveness for deadlock recovery."
+        },
+        {
+          "title": "Unschedulable pods",
+          "prompt": "A Deployment stays Pending after a resource change.",
+          "pattern": "requests + scheduler diagnosis",
+          "reveal": "Inspect pod events and compare requests with available node capacity."
         }
       ]
     },
@@ -1920,18 +2166,36 @@
       ],
       "apis": [
         {
-          "name": "Core surface",
-          "signature": "find, grep, journalctl, ss, lsof",
-          "whatFor": "High-value syntax and concepts to recall first.",
-          "example": "find, grep, journalctl, ss, lsof"
+          "name": "journalctl",
+          "signature": "journalctl [options]",
+          "whatFor": "Query systemd logs.",
+          "example": "journalctl -u api.service --since today"
+        },
+        {
+          "name": "ss",
+          "signature": "ss -ltnp",
+          "whatFor": "Inspect listening TCP sockets and owning processes.",
+          "example": "ss -ltnp"
+        },
+        {
+          "name": "find",
+          "signature": "find PATH predicates...",
+          "whatFor": "Locate files by type/name/time or other metadata.",
+          "example": "find . -type f -name '*.log'"
         }
       ],
       "practices": [
         {
-          "title": "Recognize the right tool",
-          "prompt": "Which part of the core surface matches the problem?",
-          "pattern": "identify the primitive",
-          "reveal": "Start from the smallest relevant primitive, then expand to a full pattern."
+          "title": "Port already in use",
+          "prompt": "An API cannot bind to port 8000.",
+          "pattern": "ss/lsof + process inspection",
+          "reveal": "Identify the listener, trace the PID, then decide whether to stop it or change the port."
+        },
+        {
+          "title": "Service crashes after deploy",
+          "prompt": "A systemd service immediately exits.",
+          "pattern": "systemctl + journalctl",
+          "reveal": "Check service state, then inspect the recent unit journal for the root error."
         }
       ]
     },
@@ -2028,18 +2292,36 @@
       ],
       "apis": [
         {
-          "name": "Core surface",
-          "signature": "Where-Object, Select-Object, Invoke-RestMethod",
-          "whatFor": "High-value syntax and concepts to recall first.",
-          "example": "Where-Object, Select-Object, Invoke-RestMethod"
+          "name": "Where-Object",
+          "signature": "Where-Object <condition>",
+          "whatFor": "Filter pipeline objects by properties.",
+          "example": "Where-Object Status -eq 'Running'"
+        },
+        {
+          "name": "Select-Object",
+          "signature": "Select-Object <properties>",
+          "whatFor": "Project object properties.",
+          "example": "Select-Object Name, Status"
+        },
+        {
+          "name": "Invoke-RestMethod",
+          "signature": "Invoke-RestMethod -Uri ...",
+          "whatFor": "Call an HTTP API and parse structured results.",
+          "example": "Invoke-RestMethod -Uri $url"
         }
       ],
       "practices": [
         {
-          "title": "Recognize the right tool",
-          "prompt": "Which part of the core surface matches the problem?",
-          "pattern": "identify the primitive",
-          "reveal": "Start from the smallest relevant primitive, then expand to a full pattern."
+          "title": "Service inventory",
+          "prompt": "List stopped SQL-related services with only useful fields.",
+          "pattern": "Get-Service + Where-Object + Select-Object",
+          "reveal": "Filter by typed properties and project Name/Status."
+        },
+        {
+          "title": "API automation failure",
+          "prompt": "A REST call returns an error but the script continues.",
+          "pattern": "-ErrorAction Stop + try/catch",
+          "reveal": "Turn the cmdlet error into a terminating error and handle/rethrow it."
         }
       ]
     },
@@ -2133,18 +2415,36 @@
       ],
       "apis": [
         {
-          "name": "Core surface",
-          "signature": "CALCULATE, filter context, DIVIDE, REMOVEFILTERS",
-          "whatFor": "High-value syntax and concepts to recall first.",
-          "example": "CALCULATE, filter context, DIVIDE, REMOVEFILTERS"
+          "name": "CALCULATE",
+          "signature": "CALCULATE(expression, filters...)",
+          "whatFor": "Evaluate a measure under modified filter context.",
+          "example": "CALCULATE([Revenue], Year[Year]=2026)"
+        },
+        {
+          "name": "DIVIDE",
+          "signature": "DIVIDE(numerator, denominator [, alternate])",
+          "whatFor": "Perform safe division.",
+          "example": "DIVIDE([Profit], [Revenue])"
+        },
+        {
+          "name": "REMOVEFILTERS",
+          "signature": "REMOVEFILTERS([table|column])",
+          "whatFor": "Clear selected filters inside a context transition.",
+          "example": "REMOVEFILTERS(Product[Category])"
         }
       ],
       "practices": [
         {
-          "title": "Recognize the right tool",
-          "prompt": "Which part of the core surface matches the problem?",
-          "pattern": "identify the primitive",
-          "reveal": "Start from the smallest relevant primitive, then expand to a full pattern."
+          "title": "Percent of total",
+          "prompt": "Category share should ignore category but still respect Date and Region slicers.",
+          "pattern": "CALCULATE + REMOVEFILTERS",
+          "reveal": "Remove only Product[Category] in the denominator."
+        },
+        {
+          "title": "Row-dependent revenue",
+          "prompt": "Revenue is Quantity * UnitPrice and no stored revenue column exists.",
+          "pattern": "SUMX iterator",
+          "reveal": "Iterate Sales and sum Quantity * UnitPrice per row."
         }
       ]
     },
@@ -2240,18 +2540,36 @@
       ],
       "apis": [
         {
-          "name": "Core surface",
-          "signature": "XLOOKUP, FILTER, LET, SUMIFS",
-          "whatFor": "High-value syntax and concepts to recall first.",
-          "example": "XLOOKUP, FILTER, LET, SUMIFS"
+          "name": "XLOOKUP",
+          "signature": "XLOOKUP(lookup_value, lookup_array, return_array, [if_not_found])",
+          "whatFor": "Return a matching value by key.",
+          "example": "=XLOOKUP(A2,IDs,Names,\"Unknown\")"
+        },
+        {
+          "name": "FILTER",
+          "signature": "FILTER(array, include, [if_empty])",
+          "whatFor": "Return matching rows as a dynamic array.",
+          "example": "=FILTER(Table1,Table1[Status]=\"Open\")"
+        },
+        {
+          "name": "LET",
+          "signature": "LET(name1, value1, ..., calculation)",
+          "whatFor": "Name reusable intermediate formula expressions.",
+          "example": "=LET(x,A1*B1,x*1.2)"
         }
       ],
       "practices": [
         {
-          "title": "Recognize the right tool",
-          "prompt": "Which part of the core surface matches the problem?",
-          "pattern": "identify the primitive",
-          "reveal": "Start from the smallest relevant primitive, then expand to a full pattern."
+          "title": "Customer segment lookup",
+          "prompt": "Return segment from CustomerID with a friendly missing fallback.",
+          "pattern": "XLOOKUP",
+          "reveal": "Use CustomerID as the lookup key and explicit if_not_found text."
+        },
+        {
+          "title": "Open orders report",
+          "prompt": "Return only open orders without helper columns.",
+          "pattern": "FILTER",
+          "reveal": "Use a Boolean include expression over the table's Status column."
         }
       ]
     },
@@ -2346,18 +2664,36 @@
       ],
       "apis": [
         {
-          "name": "Core surface",
-          "signature": "multi-stage builds, volumes, service DNS, logs",
-          "whatFor": "High-value syntax and concepts to recall first.",
-          "example": "multi-stage builds, volumes, service DNS, logs"
+          "name": "docker logs",
+          "signature": "docker logs [options] CONTAINER",
+          "whatFor": "Inspect container stdout/stderr.",
+          "example": "docker logs --tail 100 -f api"
+        },
+        {
+          "name": "docker exec",
+          "signature": "docker exec [options] CONTAINER COMMAND",
+          "whatFor": "Run a diagnostic command inside a running container.",
+          "example": "docker exec -it api sh"
+        },
+        {
+          "name": "docker compose",
+          "signature": "docker compose up|down|logs|ps",
+          "whatFor": "Operate a multi-container Compose application.",
+          "example": "docker compose up -d"
         }
       ],
       "practices": [
         {
-          "title": "Recognize the right tool",
-          "prompt": "Which part of the core surface matches the problem?",
-          "pattern": "identify the primitive",
-          "reveal": "Start from the smallest relevant primitive, then expand to a full pattern."
+          "title": "API starts before database is ready",
+          "prompt": "Compose starts both services but the API fails its first connection.",
+          "pattern": "healthcheck + service_healthy",
+          "reveal": "Give the database a healthcheck and make the API depend on healthy readiness."
+        },
+        {
+          "title": "Image is unexpectedly huge",
+          "prompt": "The runtime image contains compilers and package caches.",
+          "pattern": "multi-stage build",
+          "reveal": "Build in one stage and copy only runtime artifacts into the final image."
         }
       ]
     },
@@ -2455,18 +2791,36 @@
       ],
       "apis": [
         {
-          "name": "Core surface",
-          "signature": "status, diff, branch, rebase, reflog",
-          "whatFor": "High-value syntax and concepts to recall first.",
-          "example": "status, diff, branch, rebase, reflog"
+          "name": "git diff",
+          "signature": "git diff [--staged]",
+          "whatFor": "Inspect unstaged or staged changes.",
+          "example": "git diff --staged"
+        },
+        {
+          "name": "git restore",
+          "signature": "git restore [--staged] path",
+          "whatFor": "Restore worktree content or unstage paths.",
+          "example": "git restore --staged README.md"
+        },
+        {
+          "name": "git reflog",
+          "signature": "git reflog",
+          "whatFor": "Inspect local reference movements for recovery.",
+          "example": "git reflog"
         }
       ],
       "practices": [
         {
-          "title": "Recognize the right tool",
-          "prompt": "Which part of the core surface matches the problem?",
-          "pattern": "identify the primitive",
-          "reveal": "Start from the smallest relevant primitive, then expand to a full pattern."
+          "title": "Accidental hard reset",
+          "prompt": "A local commit disappeared after reset.",
+          "pattern": "reflog + recovery branch",
+          "reveal": "Find the prior HEAD in reflog, inspect it, then create a recovery branch."
+        },
+        {
+          "title": "Hotfix interrupts unfinished work",
+          "prompt": "You need a clean working tree without committing half-done code.",
+          "pattern": "stash + context switch",
+          "reveal": "Stash tracked/untracked WIP with a message, fix the hotfix, then pop it back."
         }
       ]
     }
