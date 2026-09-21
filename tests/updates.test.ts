@@ -71,14 +71,16 @@ describe("update selection", () => {
     expect(latestVersionFor("python")).toBeUndefined();
   });
 
-  it("treats first visit as all-new and suppresses same-day/older releases later", () => {
+  it("bases newness on AtlasCode curation time, not vendor publication date", () => {
     const entries=updatesForTechnology();
     expect(newUpdatesSince(entries)).toHaveLength(entries.length);
 
-    const fresh=newUpdatesSince(entries,"2026-09-15T10:00:00.000Z");
-    expect(fresh.some(entry=>entry.id==="airflow-3.3.2-2026-09-17")).toBe(true);
-    expect(fresh.some(entry=>entry.id==="docker-engine-29.8.1-2026-09-15")).toBe(false);
-    expect(fresh.every(entry=>entry.publishedAt>"2026-09-15")).toBe(true);
+    const beforeCuration=newUpdatesSince(entries,"2026-09-21T18:00:00.000Z");
+    expect(beforeCuration).toHaveLength(entries.length);
+    expect(beforeCuration.some(entry=>entry.id==="docker-engine-29.8.0-2026-09-03")).toBe(true);
+
+    const afterCuration=newUpdatesSince(entries,"2026-09-21T19:00:00.000Z");
+    expect(afterCuration).toEqual([]);
   });
 });
 
