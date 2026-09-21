@@ -106,6 +106,25 @@ test("every technology has usable learning surfaces", () => {
 });
 
 
+test("learning surfaces do not contain duplicate cards within a technology", () => {
+  for (const tech of catalog.technologies) {
+    const surfaces = [
+      ["memo labels", tech.basics.map(item => item.label)],
+      ["pattern titles", tech.patterns.map(pattern => pattern.title)],
+      ["API names", tech.apis.map(api => api.name)],
+      ["practice titles", tech.practices.map(practice => practice.title)]
+    ];
+
+    for (const [surface, values] of surfaces) {
+      assert.equal(
+        new Set(values).size,
+        values.length,
+        tech.id + " has duplicate " + surface
+      );
+    }
+  }
+});
+
 test("cross-technology concepts are comparable", () => {
   const byConcept = new Map();
   for (const tech of catalog.technologies) {
