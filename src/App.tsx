@@ -93,7 +93,12 @@ function loadWorkspaces():Workspace[]{
 
 function saveWorkspaces(workspaces:Workspace[]){
   try{
-    localStorage.setItem("atlascode.workspaces",JSON.stringify(workspaces));
+    const persistent=workspaces.map(workspace=>({
+      ...workspace,
+      left:{techId:workspace.left.techId,mode:workspace.left.mode},
+      right:{techId:workspace.right.techId,mode:workspace.right.mode}
+    }));
+    localStorage.setItem("atlascode.workspaces",JSON.stringify(persistent));
   }catch{
     // Workspace persistence is best-effort; the active session must remain usable.
   }
