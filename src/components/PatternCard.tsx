@@ -1,0 +1,65 @@
+import React from "react";
+import { Badge, Button, Card, Text, Tooltip } from "@fluentui/react-components";
+import { Copy24Regular, Star24Filled, Star24Regular } from "@fluentui/react-icons";
+import { Pattern } from "../content/catalog";
+import { relatedPatterns } from "../core/knowledge";
+
+export function PatternCard({
+  pattern,
+  favorite,
+  onToggleFavorite,
+  onOpenRelated
+}:{
+  pattern:Pattern;
+  favorite:boolean;
+  onToggleFavorite:()=>void;
+  onOpenRelated:(techId:string)=>void;
+}){
+  const [copied,setCopied]=React.useState(false);
+  const related=relatedPatterns(pattern);
+
+  const copy=async()=>{
+    try{
+      await navigator.clipboard.writeText(pattern.code);
+      setCopied(true);
+      window.setTimeout(()=>setCopied(false),1000);
+    }catch{
+      setCopied(false);
+    }
+  };
+
+  return <Card className="patternCard">
+    <div className="patternHead">
+      <div>
+        <div className="patternTitle">
+          <strong>{pattern.title}</strong>
+          {pattern.tags.map(tag=><Badge key={tag} appearance="tint">{tag}</Badge>)}
+        </div>
+        <Text className="muted">{pattern.why}</Text>
+      </div>
+      <div className="patternActions">
+        <Tooltip content={favorite?"Remove from review":"Add to review"} relationship="label">
+          <Button appearance="subtle" icon={favorite?<Star24Filled/>:<Star24Regular/>} onClick={onToggleFavorite}/>
+        </Tooltip>
+        <Tooltip content={copied?"Copied":"Copy pattern"} relationship="label">
+          <Button appearance="subtle" icon={<Copy24Regular/>} onClick={copy}/>
+        </Tooltip>
+      </div>
+    </div>
+    <div className="codeShell">
+      <div className="codeHeader"><span>{pattern.language}</span><span>{pattern.tags.join(" · ")}</span></div>
+      <pre><code>{pattern.code}</code></pre>
+    </div>
+    <div className="rememberBox"><strong>Remember</strong><span>{pattern.remember}</span></div>
+    {related.length>0&&<div className="relatedStrip">
+      <div className="relatedLabel">Same pattern in</div>
+      <div className="relatedLinks">
+        {related.slice(0,8).map(item=>
+          <button key={item.techId+":"+item.pattern.id} onClick={()=>onOpenRelated(item.techId)}>
+            {item.techName}
+          </button>
+        )}
+      </div>
+    </div>}
+  </Card>;
+}
