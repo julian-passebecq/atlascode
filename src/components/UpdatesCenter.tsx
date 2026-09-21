@@ -1,6 +1,7 @@
 import React from "react";
 import { Badge, Button, Card, Text, Title2, Title3 } from "@fluentui/react-components";
 import { byId } from "../content/catalog";
+import { knowledgeDomId } from "../core/knowledge";
 import { updatesDocument } from "../content/updates";
 import {
   loadUpdateVisits,
@@ -25,9 +26,11 @@ function formatVisit(value?:string){
 
 export function UpdatesCenter({
   techId,
+  focusId,
   onOpenPattern
 }:{
   techId?:string;
+  focusId?:string;
   onOpenPattern:(techId:string,patternId:string)=>void;
 }){
   const scope=updateScopeKey(techId);
@@ -87,7 +90,7 @@ export function UpdatesCenter({
           .map(patternId=>tech?.patterns.find(pattern=>pattern.id===patternId))
           .filter(Boolean);
 
-        return <Card key={entry.id} className={freshIds.has(entry.id)?"releaseCard releaseFresh":"releaseCard"}>
+        return <Card key={entry.id} id={knowledgeDomId("update",entry.id)} className={(freshIds.has(entry.id)?"releaseCard releaseFresh":"releaseCard")+(focusId===entry.id?" knowledgeFocused":"")}>
           <div className="releaseTop">
             <div className="releaseBadges">
               {freshIds.has(entry.id)&&<Badge appearance="filled">New</Badge>}
