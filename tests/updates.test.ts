@@ -36,6 +36,7 @@ describe("update feed integrity", () => {
       expect(entry.impact.trim()).not.toBe("");
       expect(entry.publishedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       expect(entry.publishedAt<=updatesDocument.reviewedAt).toBe(true);
+      expect(Number.isFinite(Date.parse(entry.curatedAt))).toBe(true);
 
       const url=new URL(entry.sourceUrl);
       expect(url.protocol).toBe("https:");
