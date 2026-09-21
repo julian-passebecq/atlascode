@@ -9,7 +9,8 @@ import {
   patternsForConcept,
   relatedPatterns,
   searchKnowledge,
-  technologyIdsForTrack
+  technologyIdsForTrack,
+  trackScopeForTechnology
 } from "../src/core/knowledge";
 
 describe("searchKnowledge", () => {
@@ -100,6 +101,15 @@ describe("learning tracks", () => {
       expect(devops.has(id)).toBe(true);
     }
     expect(devops.has("pandas")).toBe(false);
+  });
+
+  it("normalizes track scope when navigation leaves the active track", () => {
+    expect(trackScopeForTechnology("devops","docker")).toBe("devops");
+    expect(trackScopeForTechnology("devops","sql")).toBe("all");
+    expect(trackScopeForTechnology("cloud-lakehouse","fabric")).toBe("cloud-lakehouse");
+    expect(trackScopeForTechnology("cloud-lakehouse","bash")).toBe("all");
+    expect(trackScopeForTechnology("all","pandas")).toBe("all");
+    expect(trackScopeForTechnology("devops","missing-tech")).toBe("all");
   });
 
   it("makes track names searchable as technology metadata", () => {
