@@ -422,7 +422,13 @@ function Pane({
           <Text className="muted">{tech.tagline}</Text>
         </div>
       </div>
-      <Badge appearance="outline">{tech.group}</Badge>
+      <div className="paneBadges">
+        <Badge appearance="outline">{tech.group}</Badge>
+        {tech.tracks.map(trackId=>{
+          const track=trackById.get(trackId);
+          return track?<Badge key={trackId} appearance="tint">{track.label}</Badge>:null;
+        })}
+      </div>
     </div>
 
     <TabList
