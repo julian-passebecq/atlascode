@@ -73,6 +73,11 @@ export function searchKnowledge(query:string, limit=12):SearchResult[] {
   return hits.sort((a,b)=>b.score-a.score || a.title.localeCompare(b.title)).slice(0,safeLimit);
 }
 
+export function matchingTechnologyIds(query:string):Set<string> {
+  if(!query.trim()) return new Set(catalog.map(tech=>tech.id));
+  return new Set(searchKnowledge(query,Math.max(100,catalog.length*50)).map(result=>result.techId));
+}
+
 export function relatedPatterns(pattern:Pattern):RelatedPattern[] {
   if(!pattern.concept) return [];
   return catalog.flatMap(tech =>
