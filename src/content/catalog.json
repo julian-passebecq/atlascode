@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "contentVersion": "0.5.0",
+  "contentVersion": "0.6.0",
   "reviewedAt": "2026-09-21",
   "technologies": [
     {
@@ -1386,6 +1386,59 @@
           "tags": [
             "core"
           ]
+        },
+        {
+          "id": "k8s-probes",
+          "title": "Use startup, readiness and liveness for different questions",
+          "language": "yaml",
+          "code": "startupProbe:\n  httpGet: { path: /startup, port: 8000 }\n  failureThreshold: 30\n  periodSeconds: 2\nreadinessProbe:\n  httpGet: { path: /ready, port: 8000 }\nlivenessProbe:\n  httpGet: { path: /live, port: 8000 }",
+          "why": "Startup delays liveness/readiness until initialization succeeds; readiness controls traffic; liveness controls restarts.",
+          "remember": "Ready means receive traffic. Live means restart me if false. Startup protects slow initialization.",
+          "tags": [
+            "probes",
+            "health",
+            "pod"
+          ],
+          "concept": "container-health"
+        },
+        {
+          "id": "k8s-resources",
+          "title": "Set requests before tuning limits",
+          "language": "yaml",
+          "code": "resources:\n  requests:\n    cpu: \"250m\"\n    memory: 256Mi\n  limits:\n    memory: 512Mi",
+          "why": "Requests inform scheduling and reserved capacity; limits constrain runtime consumption.",
+          "remember": "Requests answer 'what do I need to schedule?'; limits answer 'how far may I go?'.",
+          "tags": [
+            "resources",
+            "requests",
+            "limits"
+          ]
+        },
+        {
+          "id": "k8s-config",
+          "title": "Separate configuration from the image",
+          "language": "yaml",
+          "code": "env:\n  - name: LOG_LEVEL\n    valueFrom:\n      configMapKeyRef:\n        name: api-config\n        key: log_level\n  - name: DATABASE_PASSWORD\n    valueFrom:\n      secretKeyRef:\n        name: api-secret\n        key: password",
+          "why": "Environment-specific configuration should not require rebuilding the container image.",
+          "remember": "ConfigMap for ordinary config; Secret for sensitive values; keep both outside the image.",
+          "tags": [
+            "configmap",
+            "secret",
+            "configuration"
+          ]
+        },
+        {
+          "id": "k8s-deployment",
+          "title": "Deploy immutable versions through a Deployment",
+          "language": "yaml",
+          "code": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: api\nspec:\n  replicas: 3\n  selector:\n    matchLabels: { app: api }\n  template:\n    metadata:\n      labels: { app: api }\n    spec:\n      containers:\n        - name: api\n          image: example/api:1.4.2",
+          "why": "A Deployment manages ReplicaSets and rolls the desired pod template toward the declared version.",
+          "remember": "Change the immutable image version in desired state; let the controller reconcile replicas.",
+          "tags": [
+            "deployment",
+            "rollout",
+            "desired-state"
+          ]
         }
       ],
       "apis": [
@@ -1444,6 +1497,46 @@
             "core"
           ],
           "concept": "pipeline-filter"
+        },
+        {
+          "id": "linux-journal",
+          "title": "Trace a failing service from logs",
+          "language": "bash",
+          "code": "systemctl status api.service\njournalctl -u api.service --since \"30 minutes ago\"\njournalctl -u api.service -f",
+          "why": "systemd status gives current unit state; journalctl gives the timeline needed to explain the failure.",
+          "remember": "State tells you what; logs usually tell you why.",
+          "tags": [
+            "systemd",
+            "journalctl",
+            "logs"
+          ]
+        },
+        {
+          "id": "linux-port",
+          "title": "Find the process owning a port",
+          "language": "bash",
+          "code": "ss -ltnp\nlsof -i :8000\nps -fp <pid>",
+          "why": "Binding failures are usually easier to solve by identifying the listener than by repeatedly changing application settings.",
+          "remember": "socket -> PID -> process -> decide whether to stop it or change the port.",
+          "tags": [
+            "network",
+            "process",
+            "debugging"
+          ],
+          "concept": "process-inspection"
+        },
+        {
+          "id": "linux-safe-script",
+          "title": "Fail shell scripts visibly",
+          "language": "bash",
+          "code": "#!/usr/bin/env bash\nset -euo pipefail\n\ninput=\"${1:?usage: script INPUT}\"\n[[ -f \"$input\" ]] || { echo \"missing: $input\" >&2; exit 1; }",
+          "why": "Strict shell settings catch unset variables and pipeline failures that would otherwise continue silently.",
+          "remember": "Quote variables, validate inputs, and make failure explicit.",
+          "tags": [
+            "bash",
+            "script",
+            "errors"
+          ]
         }
       ],
       "apis": [
@@ -1498,6 +1591,60 @@
             "core"
           ],
           "concept": "pipeline-filter"
+        },
+        {
+          "id": "ps-objects",
+          "title": "Filter objects instead of parsing text",
+          "language": "powershell",
+          "code": "Get-Service |\n  Where-Object Status -eq \"Running\" |\n  Select-Object Name, DisplayName |\n  Sort-Object Name",
+          "why": "PowerShell pipelines carry .NET objects, preserving typed properties between commands.",
+          "remember": "Use properties with Where-Object/Select-Object; avoid parsing formatted console text.",
+          "tags": [
+            "pipeline",
+            "objects",
+            "filter"
+          ],
+          "concept": "pipeline-filter"
+        },
+        {
+          "id": "ps-errors",
+          "title": "Turn cmdlet failures into catchable errors",
+          "language": "powershell",
+          "code": "try {\n  Invoke-RestMethod $Uri -ErrorAction Stop\n}\ncatch {\n  Write-Error \"Request failed: $($_.Exception.Message)\"\n  throw\n}",
+          "why": "Some cmdlet errors are non-terminating by default; -ErrorAction Stop makes them participate in try/catch.",
+          "remember": "Use -ErrorAction Stop when failure must abort the current operation.",
+          "tags": [
+            "errors",
+            "try-catch",
+            "automation"
+          ]
+        },
+        {
+          "id": "ps-port",
+          "title": "Inspect listeners as objects",
+          "language": "powershell",
+          "code": "Get-NetTCPConnection -State Listen |\n  Where-Object LocalPort -eq 8000 |\n  Select-Object LocalAddress, LocalPort, OwningProcess\n\nGet-Process -Id <OwningProcess>",
+          "why": "PowerShell can trace a listening endpoint to its owning process without parsing command-line text.",
+          "remember": "connection -> OwningProcess -> Get-Process mirrors the same diagnostic flow as Linux socket tools.",
+          "tags": [
+            "network",
+            "process",
+            "debugging"
+          ],
+          "concept": "process-inspection"
+        },
+        {
+          "id": "ps-files",
+          "title": "Stream file processing through the pipeline",
+          "language": "powershell",
+          "code": "Get-ChildItem . -Filter \"*.csv\" |\n  ForEach-Object {\n    Import-Csv $_.FullName\n  } |\n  Where-Object Status -eq \"Active\"",
+          "why": "Pipeline composition lets you enumerate, import and filter many files without manual index loops.",
+          "remember": "Let each pipeline stage do one operation on objects.",
+          "tags": [
+            "files",
+            "pipeline",
+            "csv"
+          ]
         }
       ],
       "apis": [
@@ -1658,6 +1805,59 @@
           "tags": [
             "core"
           ]
+        },
+        {
+          "id": "docker-multistage",
+          "title": "Keep build tooling out of the runtime image",
+          "language": "dockerfile",
+          "code": "FROM node:22-alpine AS build\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci\nCOPY . .\nRUN npm run build\n\nFROM nginx:alpine\nCOPY --from=build /app/dist /usr/share/nginx/html",
+          "why": "Multi-stage builds isolate compilers/dependencies from the final runtime image.",
+          "remember": "Build in one stage, copy only runtime artifacts into the final stage.",
+          "tags": [
+            "multi-stage",
+            "image",
+            "build"
+          ]
+        },
+        {
+          "id": "docker-health",
+          "title": "Make service readiness explicit",
+          "language": "yaml",
+          "code": "services:\n  db:\n    image: postgres:17\n    healthcheck:\n      test: [\"CMD-SHELL\", \"pg_isready -U postgres\"]\n      interval: 5s\n      timeout: 3s\n      retries: 10\n  api:\n    build: .\n    depends_on:\n      db:\n        condition: service_healthy",
+          "why": "Container startup order is not the same as service readiness; health checks make dependencies observable.",
+          "remember": "Running does not mean ready. Make readiness a check, then depend on health rather than timing.",
+          "tags": [
+            "compose",
+            "healthcheck",
+            "readiness"
+          ],
+          "concept": "container-health"
+        },
+        {
+          "id": "docker-volume",
+          "title": "Persist mutable state outside the container layer",
+          "language": "yaml",
+          "code": "services:\n  db:\n    image: postgres:17\n    volumes:\n      - db_data:/var/lib/postgresql/data\n\nvolumes:\n  db_data:",
+          "why": "Named volumes survive container recreation and separate durable state from disposable container filesystems.",
+          "remember": "Containers are replaceable; durable application state belongs in a volume or external service.",
+          "tags": [
+            "volume",
+            "persistence",
+            "compose"
+          ]
+        },
+        {
+          "id": "docker-debug",
+          "title": "Inspect a running container before rebuilding",
+          "language": "bash",
+          "code": "docker ps\ndocker logs --tail 100 api\ndocker inspect api\ndocker exec -it api sh",
+          "why": "Logs, metadata and an interactive shell usually reveal runtime failures faster than blindly rebuilding.",
+          "remember": "Observe first: logs -> inspect -> exec -> rebuild only when the image really needs to change.",
+          "tags": [
+            "debugging",
+            "logs",
+            "inspect"
+          ]
         }
       ],
       "apis": [
@@ -1714,6 +1914,58 @@
           "remember": "Use this page as a launch point; AI refreshes can expand it into deeper version-aware patterns.",
           "tags": [
             "core"
+          ]
+        },
+        {
+          "id": "git-small-commit",
+          "title": "Build one reviewable commit",
+          "language": "bash",
+          "code": "git status\ngit diff\ngit add src/feature.ts tests/feature.test.ts\ngit diff --staged\ngit commit -m \"Add deterministic customer deduplication\"",
+          "why": "Inspecting before and after staging keeps unrelated changes out of a commit.",
+          "remember": "One commit should tell one coherent story that can be reviewed or reverted.",
+          "tags": [
+            "commit",
+            "diff",
+            "review"
+          ]
+        },
+        {
+          "id": "git-rebase",
+          "title": "Refresh a private feature branch",
+          "language": "bash",
+          "code": "git fetch origin\ngit rebase origin/main\n# resolve conflicts\ngit add <resolved-files>\ngit rebase --continue",
+          "why": "Rebasing a private branch replays your work on top of the latest base and can simplify review history.",
+          "remember": "Rebase private history; do not rewrite shared history without coordination.",
+          "tags": [
+            "rebase",
+            "branch",
+            "history"
+          ]
+        },
+        {
+          "id": "git-reflog",
+          "title": "Recover a lost local commit",
+          "language": "bash",
+          "code": "git reflog\ngit show <old-head>\ngit switch -c recovery <old-head>",
+          "why": "Reflog records recent movements of local references even when a commit is no longer reachable from the current branch.",
+          "remember": "If you lost a commit after reset/rebase, check reflog before assuming the work is gone.",
+          "tags": [
+            "reflog",
+            "recovery",
+            "history"
+          ]
+        },
+        {
+          "id": "git-stash",
+          "title": "Park an incomplete working tree safely",
+          "language": "bash",
+          "code": "git stash push -u -m \"wip: customer import\"\ngit switch hotfix\n# ... finish hotfix ...\ngit switch feature/customer-import\ngit stash pop",
+          "why": "A stash can temporarily clear tracked/untracked work when you must switch context without creating a misleading commit.",
+          "remember": "Use stash for short-lived interruption, not as a long-term archive.",
+          "tags": [
+            "stash",
+            "working-tree",
+            "context-switch"
           ]
         }
       ],
