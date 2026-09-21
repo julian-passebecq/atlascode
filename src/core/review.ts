@@ -30,6 +30,17 @@ export function parseReviewState(value:unknown):ReviewState {
   return result;
 }
 
+export function pruneReviewState(
+  state:ReviewState,
+  validPatternIds:ReadonlySet<string>
+):ReviewState {
+  const result:ReviewState={};
+  for(const [patternId,entry] of Object.entries(state)){
+    if(validPatternIds.has(patternId)) result[patternId]=entry;
+  }
+  return result;
+}
+
 export function loadReviewState(storage:Pick<Storage,"getItem">=localStorage):ReviewState {
   try{
     return parseReviewState(JSON.parse(storage.getItem(STORAGE_KEY)||"{}"));
