@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-09-21",
+  "entries": [
+    {
+      "id": "airflow-3.3.2-2026-09-17",
+      "techId": "airflow",
+      "version": "3.3.2",
+      "publishedAt": "2026-09-17",
+      "kind": "fix",
+      "title": "Airflow 3.3.2 tightens backfill endpoint authorization behavior",
+      "summary": "Backfill routes now avoid exposing whether backfill IDs exist across DAGs by returning consistent not-found behavior for inaccessible or unknown IDs.",
+      "impact": "Operational/API behavior changed around backfill authorization. Core TaskFlow, dynamic mapping and data-interval patterns remain valid.",
+      "sourceLabel": "Apache Airflow 3.3.2 release notes",
+      "sourceUrl": "https://airflow.apache.org/docs/apache-airflow/3.3.2/release_notes.html",
+      "affectedPatternIds": [
+        "af-data-interval"
+      ],
+      "curatedAt": "2026-09-21T18:20:00.000Z"
+    },
+    {
+      "id": "kubernetes-1.37.0-2026-08-26",
+      "techId": "kubernetes",
+      "version": "1.37.0",
+      "publishedAt": "2026-08-26",
+      "kind": "release",
+      "title": "Kubernetes 1.37 released",
+      "summary": "Kubernetes 1.37 ships 67 enhancements: 16 graduating to Stable, 23 to Beta, 27 entering Alpha, plus one deprecation/removal.",
+      "impact": "The AtlasCode probe/resource/deployment fundamentals remain evergreen; version-specific feature adoption should be checked against the 1.37 changelog before use.",
+      "sourceLabel": "Kubernetes v1.37 release",
+      "sourceUrl": "https://kubernetes.io/blog/2026/08/26/kubernetes-v1-37-release/",
+      "affectedPatternIds": [
+        "k8s-probes",
+        "k8s-resources",
+        "k8s-deployment"
+      ],
+      "curatedAt": "2026-09-21T18:20:00.000Z"
+    },
+    {
+      "id": "docker-engine-29.8.1-2026-09-15",
+      "techId": "docker",
+      "version": "29.8.1",
+      "publishedAt": "2026-09-15",
+      "kind": "fix",
+      "title": "Docker Engine 29.8.1 released",
+      "summary": "The patch includes containerd image-store, logging, user-namespace, Windows hard-link and networking fixes, and updates static containerd binaries to 2.3.5.",
+      "impact": "No AtlasCode core Docker pattern changes are required; this is primarily a maintenance release.",
+      "sourceLabel": "Docker Engine 29 release notes",
+      "sourceUrl": "https://docs.docker.com/engine/release-notes/29/",
+      "affectedPatternIds": [
+        "docker-debug"
+      ],
+      "curatedAt": "2026-09-21T18:20:00.000Z"
+    },
+    {
+      "id": "docker-engine-29.8.0-2026-09-03",
+      "techId": "docker",
+      "version": "29.8.0",
+      "publishedAt": "2026-09-03",
+      "kind": "feature",
+      "title": "Docker Engine 29.8 adds container process umask configuration",
+      "summary": "docker create and docker run gained a --umask option backed by HostConfig.Umask for the main process, execs and healthchecks.",
+      "impact": "Useful when file-mode defaults matter inside a container; it does not change the multi-stage, healthcheck or volume patterns already taught.",
+      "sourceLabel": "Docker Engine 29 release notes",
+      "sourceUrl": "https://docs.docker.com/engine/release-notes/29/",
+      "affectedPatternIds": [],
+      "curatedAt": "2026-09-21T18:20:00.000Z"
+    },
+    {
+      "id": "spark-4.2.0-2026-07-14",
+      "techId": "spark",
+      "version": "4.2.0",
+      "publishedAt": "2026-07-14",
+      "kind": "release",
+      "title": "Apache Spark 4.2.0 released",
+      "summary": "Apache announced the stable Spark 4.2.0 release after the 4.2 preview cycle, alongside maintained 4.1.x, 4.0.x and 3.5.x lines.",
+      "impact": "Treat 4.2 as a release-line update: verify migration notes and behavior changes before upgrading production jobs. Core plan, partition, cache and join mental models remain applicable.",
+      "sourceLabel": "Apache Spark news",
+      "sourceUrl": "https://spark.apache.org/news/",
+      "affectedPatternIds": [
+        "spark-explain",
+        "spark-partitions",
+        "spark-cache"
+      ],
+      "curatedAt": "2026-09-21T18:20:00.000Z"
+    },
+    {
+      "id": "fastapi-0.141.1-2026-07-29",
+      "techId": "fastapi",
+      "version": "0.141.1",
+      "publishedAt": "2026-07-29",
+      "kind": "fix",
+      "title": "FastAPI 0.141.1 fixes frontend dependency background-task/header handling",
+      "summary": "The release fixes support for background tasks and headers coming from dependencies when using app.frontend().",
+      "impact": "The general BackgroundTasks pattern is unchanged; this matters specifically when background tasks or headers flow through frontend dependencies.",
+      "sourceLabel": "FastAPI release notes",
+      "sourceUrl": "https://fastapi.tiangolo.com/release-notes/",
+      "affectedPatternIds": [
+        "fastapi-background",
+        "fastapi-depends"
+      ],
+      "curatedAt": "2026-09-21T18:20:00.000Z"
+    },
+    {
+      "id": "fastapi-0.141.0-2026-07-29",
+      "techId": "fastapi",
+      "version": "0.141.0",
+      "publishedAt": "2026-07-29",
+      "kind": "feature",
+      "title": "FastAPI 0.141 adds app.frontend(check_dir=\"auto\")",
+      "summary": "FastAPI added an app.frontend(check_dir=\"auto\") option intended to make local frontend development more convenient with fastapi dev.",
+      "impact": "This is additive and does not change the route/dependency/response-model patterns in AtlasCode.",
+      "sourceLabel": "FastAPI release notes",
+      "sourceUrl": "https://fastapi.tiangolo.com/release-notes/",
+      "affectedPatternIds": [],
+      "curatedAt": "2026-09-21T18:20:00.000Z"
+    }
+  ]
+}

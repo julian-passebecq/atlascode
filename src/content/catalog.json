@@ -1,0 +1,3307 @@
+{
+  "schemaVersion": 2,
+  "contentVersion": "1.0.0",
+  "reviewedAt": "2026-09-21",
+  "technologies": [
+    {
+      "id": "python",
+      "name": "Python",
+      "group": "Language",
+      "tagline": "Core data-engineering Python patterns.",
+      "basics": [
+        {
+          "label": "Comprehension",
+          "value": "[f(x) for x in rows if keep(x)]"
+        },
+        {
+          "label": "Lookup",
+          "value": "mapping.get(key, default)"
+        },
+        {
+          "label": "Context",
+          "value": "with open(path) as f: ..."
+        },
+        {
+          "label": "Enumerate",
+          "value": "for i, x in enumerate(xs): ..."
+        }
+      ],
+      "patterns": [
+        {
+          "id": "py-index",
+          "title": "Index once, look up many",
+          "language": "python",
+          "code": "users_by_id = {u[\"id\"]: u for u in users}\n\nfor event in events:\n    user = users_by_id.get(event[\"user_id\"])\n    if user:\n        enrich(event, user)",
+          "why": "Replace repeated scans with one dictionary index.",
+          "remember": "A dictionary is the standard repeated key-lookup pattern.",
+          "tags": [
+            "dict",
+            "algorithm"
+          ],
+          "concept": "keyed-lookup"
+        },
+        {
+          "id": "py-generator",
+          "title": "Stream with a generator",
+          "language": "python",
+          "code": "def batches(rows, size):\n    batch = []\n    for row in rows:\n        batch.append(row)\n        if len(batch) == size:\n            yield batch\n            batch = []\n    if batch:\n        yield batch",
+          "why": "Process streams incrementally instead of materializing everything.",
+          "remember": "Use yield for files, API pages and large record streams.",
+          "tags": [
+            "iterator",
+            "memory"
+          ]
+        },
+        {
+          "id": "py-context",
+          "title": "Own resource lifetime with a context manager",
+          "language": "python",
+          "code": "from pathlib import Path\n\nwith Path(\"events.jsonl\").open() as handle:\n    for line in handle:\n        process(line)",
+          "why": "Context managers make cleanup deterministic even when an exception occurs.",
+          "remember": "If something must be closed/released, prefer a with block around its lifetime.",
+          "tags": [
+            "context-manager",
+            "resource",
+            "io"
+          ]
+        },
+        {
+          "id": "py-errors",
+          "title": "Catch expected exceptions at the boundary",
+          "language": "python",
+          "code": "def load_config(path):\n    try:\n        return json.loads(Path(path).read_text())\n    except FileNotFoundError:\n        raise RuntimeError(f\"Missing config: {path}\")\n    except json.JSONDecodeError as exc:\n        raise RuntimeError(f\"Invalid JSON: {exc}\") from exc",
+          "why": "Narrow exception handling adds useful domain context without hiding unrelated failures.",
+          "remember": "Catch what you expect, add context, preserve the original cause.",
+          "tags": [
+            "exceptions",
+            "boundary",
+            "errors"
+          ]
+        },
+        {
+          "id": "py-dataclass",
+          "title": "Use a dataclass for a small explicit record",
+          "language": "python",
+          "code": "from dataclasses import dataclass\nfrom datetime import datetime\n\n@dataclass(frozen=True)\nclass Event:\n    id: str\n    occurred_at: datetime\n    amount: float",
+          "why": "A dataclass gives named typed fields and generated value-oriented behavior without manual boilerplate.",
+          "remember": "Use it when a tuple/dict has become a real domain record with stable fields.",
+          "tags": [
+            "dataclass",
+            "typing",
+            "model"
+          ]
+        }
+      ],
+      "apis": [
+        {
+          "name": "enumerate",
+          "signature": "enumerate(iterable, start=0)",
+          "whatFor": "Loop with index and value.",
+          "example": "for i, row in enumerate(rows, start=1): ..."
+        },
+        {
+          "name": "zip",
+          "signature": "zip(*iterables, strict=False)",
+          "whatFor": "Traverse aligned iterables.",
+          "example": "for name, score in zip(names, scores): ..."
+        },
+        {
+          "name": "contextlib.contextmanager",
+          "signature": "@contextmanager",
+          "whatFor": "Build a context manager around setup/cleanup.",
+          "example": "@contextmanager\\ndef resource(): ..."
+        }
+      ],
+      "practices": [
+        {
+          "title": "Deduplicate in order",
+          "prompt": "Keep the first occurrence of each event_id.",
+          "pattern": "seen set + output list",
+          "reveal": "Maintain a set for membership and append only unseen IDs."
+        },
+        {
+          "title": "Stream a huge file",
+          "prompt": "Process millions of records without loading all rows into memory.",
+          "pattern": "generator",
+          "reveal": "Yield or iterate records incrementally instead of returning one giant list."
+        }
+      ],
+      "tracks": [
+        "data-analyst",
+        "data-engineering"
+      ]
+    },
+    {
+      "id": "pandas",
+      "name": "Pandas",
+      "group": "DataFrame",
+      "tagline": "Readable tabular transformations and validation.",
+      "basics": [
+        {
+          "label": "Filter",
+          "value": "df.loc[df['status'].eq('ok')]"
+        },
+        {
+          "label": "Assign",
+          "value": "df.assign(total=lambda x: x.qty * x.price)"
+        },
+        {
+          "label": "Group",
+          "value": "df.groupby('customer').agg(...)"
+        },
+        {
+          "label": "Merge",
+          "value": "left.merge(right, on='id', validate='m:1')"
+        }
+      ],
+      "patterns": [
+        {
+          "id": "pd-chain",
+          "title": "Readable method chain",
+          "language": "python",
+          "code": "result = (\n    orders\n    .query(\"status == 'paid'\")\n    .assign(revenue=lambda d: d[\"qty\"] * d[\"price\"])\n    .groupby(\"country\", as_index=False)\n    .agg(revenue=(\"revenue\", \"sum\"))\n)",
+          "why": "Keep a transformation visible top to bottom.",
+          "remember": "Method chains work best when each step changes the same DataFrame conceptually.",
+          "tags": [
+            "transform",
+            "groupby"
+          ]
+        },
+        {
+          "id": "pd-merge",
+          "title": "Validate joins",
+          "language": "python",
+          "code": "enriched = orders.merge(\n    customers,\n    on=\"customer_id\",\n    how=\"left\",\n    validate=\"m:1\",\n    indicator=True,\n)",
+          "why": "Join cardinality bugs can silently multiply rows.",
+          "remember": "validate and indicator make assumptions explicit.",
+          "tags": [
+            "merge",
+            "quality"
+          ]
+        },
+        {
+          "id": "pd-latest-row",
+          "title": "Latest row per business key",
+          "language": "python",
+          "code": "latest = (\n    events\n    .sort_values([\"customer_id\", \"updated_at\"])\n    .drop_duplicates(\"customer_id\", keep=\"last\")\n)",
+          "why": "Sort explicitly, then keep one deterministic winner per key.",
+          "remember": "In Pandas, latest-row logic is usually sort_values + drop_duplicates.",
+          "tags": [
+            "dedupe",
+            "latest",
+            "sort"
+          ],
+          "concept": "latest-row"
+        },
+        {
+          "id": "pd-anti-join",
+          "title": "Keep rows missing from the other table",
+          "language": "python",
+          "code": "missing = (\n    source.merge(target[[\"id\"]], on=\"id\", how=\"left\", indicator=True)\n    .loc[lambda d: d[\"_merge\"].eq(\"left_only\")]\n    .drop(columns=\"_merge\")\n)",
+          "why": "A left merge with an indicator makes unmatched rows explicit and debuggable.",
+          "remember": "Pandas anti-join = left merge + indicator + left_only.",
+          "tags": [
+            "join",
+            "anti-join",
+            "merge"
+          ],
+          "concept": "anti-join"
+        },
+        {
+          "id": "pd-group-agg",
+          "title": "Named grouped aggregation",
+          "language": "python",
+          "code": "summary = (\n    orders.groupby(\"customer_id\", as_index=False)\n    .agg(\n        order_count=(\"order_id\", \"size\"),\n        revenue=(\"amount\", \"sum\"),\n    )\n)",
+          "why": "Named aggregation keeps output column names close to their source and aggregation function.",
+          "remember": "Pandas grain = groupby keys; use named agg for readable outputs.",
+          "tags": [
+            "groupby",
+            "aggregation",
+            "grain"
+          ],
+          "concept": "grouped-aggregation"
+        }
+      ],
+      "apis": [
+        {
+          "name": "assign",
+          "signature": "df.assign(**columns)",
+          "whatFor": "Add derived columns in a chain.",
+          "example": "df.assign(net=lambda d: d.gross-d.tax)"
+        },
+        {
+          "name": "GroupBy.agg",
+          "signature": "grouped.agg(new_col=('source','func'))",
+          "whatFor": "Named aggregation.",
+          "example": "df.groupby('k').agg(total=('v','sum'))"
+        },
+        {
+          "name": "DataFrame.merge",
+          "signature": "left.merge(right, ..., validate=...)",
+          "whatFor": "Join DataFrames with optional cardinality validation.",
+          "example": "orders.merge(customers,on='customer_id',validate='m:1')"
+        }
+      ],
+      "practices": [
+        {
+          "title": "Latest order per customer",
+          "prompt": "Keep one newest order per customer.",
+          "pattern": "sort + drop_duplicates",
+          "reveal": "Sort by timestamp descending, then drop_duplicates on customer_id."
+        },
+        {
+          "title": "Join without row explosion",
+          "prompt": "Orders are many-to-one with customers and row count must stay stable.",
+          "pattern": "merge(validate='m:1')",
+          "reveal": "Declare expected cardinality and inspect unmatched rows."
+        }
+      ],
+      "tracks": [
+        "data-analyst"
+      ]
+    },
+    {
+      "id": "polars",
+      "name": "Polars",
+      "group": "DataFrame",
+      "tagline": "Expression-first columnar DataFrames.",
+      "basics": [
+        {
+          "label": "Select",
+          "value": "df.select(pl.col('a'))"
+        },
+        {
+          "label": "Filter",
+          "value": "df.filter(pl.col('status') == 'ok')"
+        },
+        {
+          "label": "Group",
+          "value": "df.group_by('customer').agg(...)"
+        },
+        {
+          "label": "Lazy",
+          "value": "pl.scan_parquet(path)...collect()"
+        }
+      ],
+      "patterns": [
+        {
+          "id": "pl-expr",
+          "title": "Expression pipeline",
+          "language": "python",
+          "code": "result = (\n    df\n    .filter(pl.col(\"status\") == \"paid\")\n    .with_columns((pl.col(\"qty\") * pl.col(\"price\")).alias(\"revenue\"))\n    .group_by(\"country\")\n    .agg(pl.col(\"revenue\").sum())\n)",
+          "why": "Expressions give Polars room to optimize and parallelize.",
+          "remember": "Think column expressions, not row-wise Python.",
+          "tags": [
+            "expressions"
+          ]
+        },
+        {
+          "id": "pl-lazy",
+          "title": "Lazy scan",
+          "language": "python",
+          "code": "result = (\n    pl.scan_parquet(\"events/*.parquet\")\n    .filter(pl.col(\"event_date\") >= cutoff)\n    .select([\"user_id\", \"amount\"])\n    .group_by(\"user_id\")\n    .agg(pl.col(\"amount\").sum())\n    .collect()\n)",
+          "why": "Lazy scans can push filters and projections down.",
+          "remember": "Use scan_* for analytical file pipelines and collect at the boundary.",
+          "tags": [
+            "lazy",
+            "parquet"
+          ],
+          "concept": "lazy-file-scan"
+        },
+        {
+          "id": "pl-latest-row",
+          "title": "Latest row per business key",
+          "language": "python",
+          "code": "latest = (\n    df\n    .sort([\"customer_id\", \"updated_at\"])\n    .unique(subset=[\"customer_id\"], keep=\"last\")\n)",
+          "why": "Ordered unique selection expresses a compact top-one-per-key pattern.",
+          "remember": "Sort by the tie-breaker first, then unique on the business key.",
+          "tags": [
+            "dedupe",
+            "latest",
+            "sort"
+          ],
+          "concept": "latest-row"
+        },
+        {
+          "id": "pl-anti-join",
+          "title": "Anti-join directly",
+          "language": "python",
+          "code": "missing = source.join(\n    target.select(\"id\"),\n    on=\"id\",\n    how=\"anti\",\n)",
+          "why": "Polars exposes anti join as a first-class join strategy.",
+          "remember": "Use how='anti' when you only need left rows with no match.",
+          "tags": [
+            "join",
+            "anti-join"
+          ],
+          "concept": "anti-join"
+        },
+        {
+          "id": "pl-group-agg",
+          "title": "Expression grouped aggregation",
+          "language": "python",
+          "code": "summary = (\n    orders.group_by(\"customer_id\")\n    .agg(\n        pl.len().alias(\"order_count\"),\n        pl.col(\"amount\").sum().alias(\"revenue\"),\n    )\n)",
+          "why": "Polars keeps aggregation logic as optimized expressions.",
+          "remember": "Polars grain = group_by keys; every agg expression returns one value per group.",
+          "tags": [
+            "group-by",
+            "aggregation",
+            "expressions"
+          ],
+          "concept": "grouped-aggregation"
+        }
+      ],
+      "apis": [
+        {
+          "name": "pl.col",
+          "signature": "pl.col(name)",
+          "whatFor": "Reference a column expression.",
+          "example": "pl.col('amount').sum()"
+        },
+        {
+          "name": "scan_parquet",
+          "signature": "pl.scan_parquet(source)",
+          "whatFor": "Create a LazyFrame.",
+          "example": "pl.scan_parquet('*.parquet')"
+        },
+        {
+          "name": "with_columns",
+          "signature": "frame.with_columns(*exprs)",
+          "whatFor": "Add or replace columns through expressions.",
+          "example": "df.with_columns(pl.col('x').cast(pl.Int64))"
+        }
+      ],
+      "practices": [
+        {
+          "title": "Latest row per user",
+          "prompt": "Read large Parquet and keep latest event.",
+          "pattern": "lazy scan + ordered unique",
+          "reveal": "Scan lazily, filter early, sort by event time, then keep one row per user."
+        },
+        {
+          "title": "Large Parquet transform",
+          "prompt": "Filter and aggregate many files with minimal I/O.",
+          "pattern": "scan_parquet + lazy expressions",
+          "reveal": "Use a LazyFrame, filter/select early, collect at the boundary."
+        }
+      ],
+      "tracks": [
+        "data-analyst",
+        "data-engineering"
+      ]
+    },
+    {
+      "id": "spark",
+      "name": "Spark / PySpark",
+      "group": "Distributed",
+      "tagline": "Partitions, shuffles, joins and DataFrame execution.",
+      "basics": [
+        {
+          "label": "Narrow",
+          "value": "select / filter / map"
+        },
+        {
+          "label": "Wide",
+          "value": "groupBy / distinct / repartition"
+        },
+        {
+          "label": "Plan",
+          "value": "df.explain('formatted')"
+        },
+        {
+          "label": "Rule",
+          "value": "Watch shuffle, skew and tiny files"
+        }
+      ],
+      "patterns": [
+        {
+          "id": "spark-window",
+          "title": "Latest row per key",
+          "language": "python",
+          "code": "w = Window.partitionBy(\"customer_id\").orderBy(F.col(\"updated_at\").desc())\n\nlatest = (\n    df\n    .withColumn(\"_rn\", F.row_number().over(w))\n    .filter(F.col(\"_rn\") == 1)\n    .drop(\"_rn\")\n)",
+          "why": "Window functions express ordered per-key logic without collecting.",
+          "remember": "row_number is the standard deterministic dedupe shape.",
+          "tags": [
+            "window",
+            "dedupe"
+          ],
+          "concept": "latest-row"
+        },
+        {
+          "id": "spark-broadcast",
+          "title": "Broadcast small dimension",
+          "language": "python",
+          "code": "result = fact.join(\n    F.broadcast(dim),\n    on=\"country_id\",\n    how=\"left\"\n)",
+          "why": "Broadcast can avoid shuffling a large fact relation.",
+          "remember": "Broadcast only genuinely small data and confirm the plan.",
+          "tags": [
+            "join",
+            "broadcast"
+          ]
+        },
+        {
+          "id": "spark-explain",
+          "title": "Read the physical plan before tuning",
+          "language": "python",
+          "code": "query = (\n    fact.join(dim, 'country_id')\n    .groupBy('country_id')\n    .agg(F.sum('amount').alias('revenue'))\n)\n\nquery.explain(\"formatted\")",
+          "why": "The physical plan reveals exchanges, join strategies and scans that explain where distributed work happens.",
+          "remember": "Tune what Spark actually planned, not what you assume the code means.",
+          "tags": [
+            "explain",
+            "plan",
+            "performance"
+          ]
+        },
+        {
+          "id": "spark-partitions",
+          "title": "Choose repartition vs coalesce deliberately",
+          "language": "python",
+          "code": "# redistribute by a useful key\nbalanced = df.repartition(\"customer_id\")\n\n# reduce output partitions after filtering\nsmaller = filtered.coalesce(16)",
+          "why": "repartition performs a shuffle to rebalance/change partitioning; coalesce is commonly used to reduce partitions with less movement.",
+          "remember": "Repartition to redistribute; coalesce mainly to shrink partition count.",
+          "tags": [
+            "partition",
+            "repartition",
+            "coalesce"
+          ]
+        },
+        {
+          "id": "spark-cache",
+          "title": "Cache only reused expensive intermediates",
+          "language": "python",
+          "code": "base = expensive_transform(events).cache()\n\ndaily = base.groupBy(\"event_date\").count()\nby_type = base.groupBy(\"event_type\").count()\n\nbase.unpersist()",
+          "why": "Caching can avoid recomputation when the same expensive lineage is reused, but consumes cluster memory/storage.",
+          "remember": "Cache for reuse, not by habit; unpersist when the reuse window is over.",
+          "tags": [
+            "cache",
+            "lineage",
+            "performance"
+          ]
+        }
+      ],
+      "apis": [
+        {
+          "name": "DataFrame.explain",
+          "signature": "df.explain(mode='formatted')",
+          "whatFor": "Inspect physical planning.",
+          "example": "df.explain('formatted')"
+        },
+        {
+          "name": "Window",
+          "signature": "Window.partitionBy(...).orderBy(...)",
+          "whatFor": "Define analytical windows.",
+          "example": "Window.partitionBy('id').orderBy('ts')"
+        },
+        {
+          "name": "DataFrame.repartition",
+          "signature": "df.repartition(n?, *cols)",
+          "whatFor": "Redistribute data into new partitions.",
+          "example": "df.repartition('customer_id')"
+        }
+      ],
+      "practices": [
+        {
+          "title": "Skewed aggregation",
+          "prompt": "One key owns 40% of rows.",
+          "pattern": "diagnose skew + salt if needed",
+          "reveal": "Confirm skew first, then consider salting or a different aggregation plan."
+        },
+        {
+          "title": "Repeated expensive branch",
+          "prompt": "Two downstream reports reuse the same costly cleaned DataFrame.",
+          "pattern": "cache + unpersist",
+          "reveal": "Cache the reused intermediate, trigger reuse, then unpersist."
+        }
+      ],
+      "tracks": [
+        "data-engineering",
+        "cloud-lakehouse"
+      ]
+    },
+    {
+      "id": "pyspark",
+      "name": "PySpark",
+      "group": "Distributed",
+      "tagline": "Spark DataFrame patterns expressed through Python APIs.",
+      "basics": [
+        {
+          "label": "Column",
+          "value": "F.col('amount')"
+        },
+        {
+          "label": "Conditional",
+          "value": "F.when(cond, value).otherwise(other)"
+        },
+        {
+          "label": "Window",
+          "value": "Window.partitionBy('id').orderBy(...)"
+        },
+        {
+          "label": "Rule",
+          "value": "Prefer Spark built-ins over Python UDFs"
+        }
+      ],
+      "patterns": [
+        {
+          "id": "pyspark-window-dedupe",
+          "title": "Latest row per business key",
+          "language": "python",
+          "code": "w = Window.partitionBy(\"customer_id\").orderBy(\n    F.col(\"updated_at\").desc()\n)\n\nlatest = (\n    df\n    .withColumn(\"_rn\", F.row_number().over(w))\n    .filter(F.col(\"_rn\") == 1)\n    .drop(\"_rn\")\n)",
+          "why": "Window functions express ordered per-key logic without collecting data to the driver.",
+          "remember": "Use row_number for deterministic deduplication when you have a clear ordering column.",
+          "tags": [
+            "window",
+            "dedupe"
+          ],
+          "concept": "latest-row"
+        },
+        {
+          "id": "pyspark-builtins",
+          "title": "Prefer built-in Spark expressions",
+          "language": "python",
+          "code": "clean = df.withColumn(\n    \"email_domain\",\n    F.lower(F.element_at(F.split(F.col(\"email\"), \"@\"), -1))\n)",
+          "why": "Built-in expressions stay inside Spark's optimized execution engine.",
+          "remember": "Check pyspark.sql.functions before reaching for a Python UDF.",
+          "tags": [
+            "functions",
+            "udf"
+          ]
+        },
+        {
+          "id": "pyspark-anti-join",
+          "title": "Left anti join",
+          "language": "python",
+          "code": "missing = source.join(\n    target.select(\"id\"),\n    on=\"id\",\n    how=\"left_anti\",\n)",
+          "why": "Spark's left_anti join avoids carrying right-side columns when you only need non-matches.",
+          "remember": "PySpark anti-join = how='left_anti'.",
+          "tags": [
+            "join",
+            "anti-join",
+            "spark"
+          ],
+          "concept": "anti-join"
+        },
+        {
+          "id": "pyspark-group-agg",
+          "title": "Distributed grouped aggregation",
+          "language": "python",
+          "code": "summary = (\n    orders.groupBy(\"customer_id\")\n    .agg(\n        F.count(\"*\").alias(\"order_count\"),\n        F.sum(\"amount\").alias(\"revenue\"),\n    )\n)",
+          "why": "groupBy changes the physical data distribution and usually introduces a shuffle.",
+          "remember": "In Spark, GROUP BY is a wide operation: reason about grain and shuffle together.",
+          "tags": [
+            "groupby",
+            "aggregation",
+            "shuffle"
+          ],
+          "concept": "grouped-aggregation"
+        }
+      ],
+      "apis": [
+        {
+          "name": "pyspark.sql.functions",
+          "signature": "from pyspark.sql import functions as F",
+          "whatFor": "Use Spark SQL expressions from Python.",
+          "example": "F.sum('amount')"
+        },
+        {
+          "name": "Window",
+          "signature": "Window.partitionBy(...).orderBy(...)",
+          "whatFor": "Define partitioned ordered windows.",
+          "example": "Window.partitionBy('id').orderBy(F.col('ts').desc())"
+        },
+        {
+          "name": "DataFrame.join",
+          "signature": "df.join(other, on=..., how=...)",
+          "whatFor": "Join Spark DataFrames using explicit join semantics.",
+          "example": "source.join(target,on='id',how='left_anti')"
+        }
+      ],
+      "practices": [
+        {
+          "title": "Incremental CDC dedupe",
+          "prompt": "Keep only the newest record per primary key.",
+          "pattern": "Window + row_number",
+          "reveal": "Partition by the business key, order by sequence/timestamp descending, then keep row_number = 1."
+        },
+        {
+          "title": "Find missing target keys",
+          "prompt": "Keep source rows whose IDs do not exist in target.",
+          "pattern": "left_anti join",
+          "reveal": "Use a left anti join rather than joining and filtering null right columns."
+        }
+      ],
+      "tracks": [
+        "data-engineering",
+        "cloud-lakehouse"
+      ]
+    },
+    {
+      "id": "airflow",
+      "name": "Apache Airflow",
+      "group": "Orchestration",
+      "tagline": "DAG design, retries, schedules and task boundaries.",
+      "basics": [
+        {
+          "label": "TaskFlow",
+          "value": "@dag + @task"
+        },
+        {
+          "label": "Dependency",
+          "value": "extract() >> transform()"
+        },
+        {
+          "label": "Interval",
+          "value": "Use logical data intervals"
+        },
+        {
+          "label": "XCom",
+          "value": "Pass metadata, not large datasets"
+        }
+      ],
+      "patterns": [
+        {
+          "id": "af-taskflow",
+          "title": "TaskFlow DAG",
+          "language": "python",
+          "code": "@dag(schedule=\"@daily\", catchup=False)\ndef orders_pipeline():\n\n    @task(retries=2)\n    def extract():\n        return {\"path\": \"/data/orders.json\"}\n\n    @task\n    def transform(meta):\n        return run_transform(meta[\"path\"])\n\n    transform(extract())",
+          "why": "TaskFlow keeps dependency wiring close to Python.",
+          "remember": "Tasks should be meaningful retryable operational boundaries.",
+          "tags": [
+            "dag",
+            "taskflow"
+          ]
+        },
+        {
+          "id": "af-dynamic-map",
+          "title": "Dynamic task mapping",
+          "language": "python",
+          "code": "@task\ndef partitions():\n    return [\"2026-09-19\", \"2026-09-20\", \"2026-09-21\"]\n\n@task\ndef process(day):\n    return load_partition(day)\n\nprocess.expand(day=partitions())",
+          "why": "Dynamic task mapping creates separate runtime task instances from upstream data, preserving retries and observability per mapped item.",
+          "remember": "Use expand() when the number of parallel task instances is known only at run time.",
+          "tags": [
+            "dynamic-mapping",
+            "taskflow",
+            "parallelism"
+          ]
+        },
+        {
+          "id": "af-data-interval",
+          "title": "Idempotent partition from the data interval",
+          "language": "python",
+          "code": "@task\ndef load_partition(**context):\n    start = context[\"data_interval_start\"]\n    end = context[\"data_interval_end\"]\n    replace_partition(start, end)",
+          "why": "Airflow schedules logical data intervals; using that interval makes backfills and retries target the same business slice.",
+          "remember": "A retry should rewrite the same logical partition, not append a second copy.",
+          "tags": [
+            "idempotency",
+            "data-interval",
+            "backfill"
+          ],
+          "concept": "idempotent-batch"
+        },
+        {
+          "id": "af-small-xcom",
+          "title": "Pass metadata, not datasets",
+          "language": "python",
+          "code": "@task\ndef extract():\n    path = write_parquet(\"/lake/raw/orders\")\n    return {\"path\": path, \"row_count\": 182340}\n\n@task\ndef transform(meta):\n    return transform_path(meta[\"path\"])",
+          "why": "TaskFlow can move small results through XCom, but large datasets belong in durable storage.",
+          "remember": "XCom should coordinate tasks; object storage/database tables should carry the data.",
+          "tags": [
+            "xcom",
+            "task-boundary",
+            "metadata"
+          ]
+        }
+      ],
+      "apis": [
+        {
+          "name": "@dag",
+          "signature": "@dag(schedule=..., catchup=...)",
+          "whatFor": "Declare a DAG factory.",
+          "example": "@dag(schedule='@daily', catchup=False)"
+        },
+        {
+          "name": "@task",
+          "signature": "@task(retries=...)",
+          "whatFor": "Declare a Python task.",
+          "example": "@task(retries=3)"
+        },
+        {
+          "name": "expand",
+          "signature": "task.expand(arg=upstream)",
+          "whatFor": "Create mapped task instances at runtime.",
+          "example": "process.expand(day=partitions())"
+        }
+      ],
+      "practices": [
+        {
+          "title": "Backfillable daily ingestion",
+          "prompt": "Rerun one day safely.",
+          "pattern": "data interval + idempotency",
+          "reveal": "Parameterize writes by the logical interval and make them idempotent."
+        },
+        {
+          "title": "Runtime list of partitions",
+          "prompt": "An upstream discovery task returns a variable list of dates to process.",
+          "pattern": "dynamic task mapping",
+          "reveal": "Return the dates, then expand the processing task over them."
+        }
+      ],
+      "tracks": [
+        "data-engineering"
+      ]
+    },
+    {
+      "id": "dbt",
+      "name": "dbt",
+      "group": "Transformation",
+      "tagline": "SQL models, ref/source, incremental logic and tests.",
+      "basics": [
+        {
+          "label": "Dependency",
+          "value": "{{ ref('stg_orders') }}"
+        },
+        {
+          "label": "Source",
+          "value": "{{ source('raw','orders') }}"
+        },
+        {
+          "label": "Incremental",
+          "value": "{% if is_incremental() %}"
+        },
+        {
+          "label": "Tests",
+          "value": "unique + not_null + relationships"
+        }
+      ],
+      "patterns": [
+        {
+          "id": "dbt-stage",
+          "title": "Thin staging model",
+          "language": "sql",
+          "code": "select\n  cast(order_id as bigint) as order_id,\n  cast(order_ts as timestamp) as order_ts,\n  amount\nfrom {{ source('raw', 'orders') }}",
+          "why": "Normalize names and types close to the source.",
+          "remember": "Keep staging mechanical; move business meaning downstream.",
+          "tags": [
+            "staging",
+            "source"
+          ]
+        },
+        {
+          "id": "dbt-inc",
+          "title": "Incremental lookback",
+          "language": "sql",
+          "code": "{{ config(materialized='incremental', unique_key='order_id') }}\n\nselect *\nfrom {{ ref('stg_orders') }}\n\n{% if is_incremental() %}\nwhere updated_at >= (\n  select max(updated_at) - interval '2 day' from {{ this }}\n)\n{% endif %}",
+          "why": "Process changes while tolerating late arrivals.",
+          "remember": "Incremental logic must remain correct on a full refresh.",
+          "tags": [
+            "incremental"
+          ]
+        },
+        {
+          "id": "dbt-tests",
+          "title": "Put grain assumptions into tests",
+          "language": "yaml",
+          "code": "models:\n  - name: dim_customer\n    columns:\n      - name: customer_id\n        data_tests:\n          - not_null\n          - unique\n      - name: country_code\n        data_tests:\n          - relationships:\n              arguments:\n                to: ref('dim_country')\n                field: country_code",
+          "why": "Tests turn model-grain and relationship expectations into executable project contracts.",
+          "remember": "Test the key, nullability, accepted domain, and important relationships—not every column indiscriminately.",
+          "tags": [
+            "tests",
+            "quality",
+            "relationships"
+          ]
+        },
+        {
+          "id": "dbt-macro",
+          "title": "Extract repeated SQL into a macro",
+          "language": "sql",
+          "code": "{% macro cents_to_currency(column_name) %}\n  ({{ column_name }} / 100.0)\n{% endmacro %}\n\nselect\n  order_id,\n  {{ cents_to_currency('amount_cents') }} as amount\nfrom {{ ref('stg_orders') }}",
+          "why": "Macros remove repeated SQL syntax while keeping the model dependency graph in ordinary ref/source calls.",
+          "remember": "Use macros for repeated transformation mechanics, not to hide the entire model behind metaprogramming.",
+          "tags": [
+            "jinja",
+            "macro",
+            "reuse"
+          ]
+        },
+        {
+          "id": "dbt-source-freshness",
+          "title": "Declare source expectations",
+          "language": "yaml",
+          "code": "sources:\n  - name: raw\n    schema: landing\n    tables:\n      - name: orders\n        loaded_at_field: ingested_at\n        freshness:\n          warn_after: {count: 2, period: hour}\n          error_after: {count: 6, period: hour}",
+          "why": "Source metadata makes upstream data availability an explicit part of the analytics contract.",
+          "remember": "A transformation can be logically correct and still be wrong for users if the source is stale.",
+          "tags": [
+            "source",
+            "freshness",
+            "quality"
+          ]
+        }
+      ],
+      "apis": [
+        {
+          "name": "ref",
+          "signature": "ref('model_name')",
+          "whatFor": "Declare model dependency.",
+          "example": "from {{ ref('stg_orders') }}"
+        },
+        {
+          "name": "source",
+          "signature": "source('source','table')",
+          "whatFor": "Reference declared raw sources.",
+          "example": "{{ source('raw','events') }}"
+        },
+        {
+          "name": "is_incremental",
+          "signature": "is_incremental()",
+          "whatFor": "Branch SQL logic only during incremental execution.",
+          "example": "{% if is_incremental() %} ... {% endif %}"
+        }
+      ],
+      "practices": [
+        {
+          "title": "Late-arriving facts",
+          "prompt": "Source can revise 48 hours.",
+          "pattern": "incremental lookback",
+          "reveal": "Use a safety window and merge on a stable unique key."
+        },
+        {
+          "title": "Repeated currency conversion",
+          "prompt": "Many models repeat the same cents-to-decimal SQL.",
+          "pattern": "macro",
+          "reveal": "Extract the mechanical SQL expression into a small reusable macro."
+        }
+      ],
+      "tracks": [
+        "data-engineering",
+        "bi-warehousing"
+      ]
+    },
+    {
+      "id": "sql",
+      "name": "SQL",
+      "group": "SQL",
+      "tagline": "Portable joins, windows, CTEs and aggregation.",
+      "basics": [
+        {
+          "label": "CTE",
+          "value": "with base as (...) select ... from base"
+        },
+        {
+          "label": "Window",
+          "value": "row_number() over (partition by ... order by ...)"
+        },
+        {
+          "label": "Conditional agg",
+          "value": "sum(case when ... then amount else 0 end)"
+        },
+        {
+          "label": "Null",
+          "value": "coalesce(value, fallback)"
+        }
+      ],
+      "patterns": [
+        {
+          "id": "sql-latest",
+          "title": "Latest row per key",
+          "language": "sql",
+          "code": "with ranked as (\n  select t.*,\n    row_number() over (\n      partition by customer_id\n      order by updated_at desc\n    ) as rn\n  from customer_status t\n)\nselect * from ranked where rn = 1;",
+          "why": "Ranking windows solve deterministic top-N per group.",
+          "remember": "Partition defines the group; order defines the winner.",
+          "tags": [
+            "window",
+            "dedupe"
+          ],
+          "concept": "latest-row"
+        },
+        {
+          "id": "sql-anti",
+          "title": "Anti-join",
+          "language": "sql",
+          "code": "select s.*\nfrom source_rows s\nleft join target_rows t\n  on t.id = s.id\nwhere t.id is null;",
+          "why": "Find rows present on one side and absent on the other.",
+          "remember": "NOT EXISTS is an equally useful anti-join shape.",
+          "tags": [
+            "join",
+            "set"
+          ],
+          "concept": "anti-join"
+        },
+        {
+          "id": "sql-group-agg",
+          "title": "Grouped aggregation",
+          "language": "sql",
+          "code": "select\n  customer_id,\n  count(*) as order_count,\n  sum(amount) as revenue\nfrom orders\ngroup by customer_id;",
+          "why": "Aggregate at the required business grain and name each derived measure explicitly.",
+          "remember": "The GROUP BY columns define the output grain.",
+          "tags": [
+            "group-by",
+            "aggregation",
+            "grain"
+          ],
+          "concept": "grouped-aggregation"
+        },
+        {
+          "id": "sql-lag-gap",
+          "title": "Compare each row to the previous event",
+          "language": "sql",
+          "code": "select\n  user_id,\n  event_ts,\n  lag(event_ts) over (\n    partition by user_id\n    order by event_ts\n  ) as previous_event_ts\nfrom events;",
+          "why": "LAG reads a previous row within an ordered partition without a self-join.",
+          "remember": "Partition defines whose history you compare; order defines what 'previous' means.",
+          "tags": [
+            "window",
+            "lag",
+            "sequence"
+          ]
+        },
+        {
+          "id": "sql-conditional-agg",
+          "title": "Turn row conditions into measures",
+          "language": "sql",
+          "code": "select\n  customer_id,\n  sum(case when status = 'paid' then amount else 0 end) as paid_revenue,\n  sum(case when status = 'refund' then amount else 0 end) as refunded\nfrom orders\ngroup by customer_id;",
+          "why": "Conditional aggregation computes multiple business measures at one grouped grain.",
+          "remember": "Keep the GROUP BY grain fixed; change the CASE expression for each metric.",
+          "tags": [
+            "aggregation",
+            "case",
+            "metrics"
+          ]
+        }
+      ],
+      "apis": [
+        {
+          "name": "ROW_NUMBER",
+          "signature": "ROW_NUMBER() OVER (...)",
+          "whatFor": "Rank rows in a group.",
+          "example": "row_number() over (partition by id order by ts desc)"
+        },
+        {
+          "name": "LAG",
+          "signature": "LAG(expr) OVER (...)",
+          "whatFor": "Read the previous row.",
+          "example": "lag(status) over (partition by id order by ts)"
+        },
+        {
+          "name": "COALESCE",
+          "signature": "COALESCE(a,b,...)",
+          "whatFor": "Return the first non-null expression.",
+          "example": "COALESCE(discount,0)"
+        }
+      ],
+      "practices": [
+        {
+          "title": "Consecutive activity",
+          "prompt": "Find gaps between user events.",
+          "pattern": "LAG + timestamp difference",
+          "reveal": "Use LAG(event_ts) partitioned by user and compare timestamps."
+        },
+        {
+          "title": "Paid vs refunded revenue",
+          "prompt": "Create several measures at the same customer grain.",
+          "pattern": "conditional aggregation",
+          "reveal": "Group once and use CASE inside SUM for each measure."
+        }
+      ],
+      "tracks": [
+        "data-analyst",
+        "data-engineering",
+        "bi-warehousing"
+      ]
+    },
+    {
+      "id": "duckdb",
+      "name": "DuckDB",
+      "group": "SQL Engines",
+      "tagline": "Embedded OLAP over local files.",
+      "basics": [
+        {
+          "label": "Parquet",
+          "value": "select * from read_parquet('*.parquet')"
+        },
+        {
+          "label": "CSV",
+          "value": "select * from read_csv_auto('x.csv')"
+        },
+        {
+          "label": "Export",
+          "value": "copy (...) to 'out.parquet' (format parquet)"
+        },
+        {
+          "label": "Inspect",
+          "value": "describe select ..."
+        }
+      ],
+      "patterns": [
+        {
+          "id": "duck-files",
+          "title": "Query files directly",
+          "language": "sql",
+          "code": "select\n  customer_id,\n  sum(amount) as revenue\nfrom read_parquet('lake/orders/**/*.parquet', hive_partitioning = true)\nwhere order_date >= date '2026-09-01'\ngroup by customer_id;",
+          "why": "Query columnar files without loading them into a server database.",
+          "remember": "Push filters and projections into the scan.",
+          "tags": [
+            "parquet",
+            "olap"
+          ],
+          "concept": "lazy-file-scan"
+        },
+        {
+          "id": "duckdb-anti-join",
+          "title": "Anti-join with NOT EXISTS",
+          "language": "sql",
+          "code": "select s.*\nfrom source_rows s\nwhere not exists (\n  select 1\n  from target_rows t\n  where t.id = s.id\n);",
+          "why": "NOT EXISTS is a clear null-safe anti-join idiom in SQL engines including DuckDB.",
+          "remember": "Use NOT EXISTS when the question is 'which left rows have no right match?'.",
+          "tags": [
+            "join",
+            "anti-join",
+            "not-exists"
+          ],
+          "concept": "anti-join"
+        },
+        {
+          "id": "duckdb-group-agg",
+          "title": "Aggregate files at business grain",
+          "language": "sql",
+          "code": "select\n  customer_id,\n  count(*) as order_count,\n  sum(amount) as revenue\nfrom read_parquet('orders/*.parquet')\ngroup by customer_id;",
+          "why": "DuckDB can aggregate directly over files without a separate ingestion step.",
+          "remember": "Push projection/filtering into the file scan, then aggregate at the required grain.",
+          "tags": [
+            "group-by",
+            "aggregation",
+            "parquet"
+          ],
+          "concept": "grouped-aggregation"
+        },
+        {
+          "id": "duckdb-copy-parquet",
+          "title": "Materialize a reusable Parquet result",
+          "language": "sql",
+          "code": "copy (\n  select *\n  from read_csv_auto('incoming/orders.csv')\n  where amount > 0\n)\nto 'curated/orders.parquet'\n(format parquet, compression zstd);",
+          "why": "COPY turns an analytical query result into an efficient reusable columnar artifact.",
+          "remember": "Query raw flexibly; materialize clean reusable outputs as Parquet.",
+          "tags": [
+            "copy",
+            "parquet",
+            "materialization"
+          ]
+        },
+        {
+          "id": "duckdb-profile",
+          "title": "Inspect query execution before rewriting SQL",
+          "language": "sql",
+          "code": "explain analyze\nselect customer_id, sum(amount)\nfrom read_parquet('orders/*.parquet')\ngroup by customer_id;",
+          "why": "EXPLAIN ANALYZE shows the executed operator tree and timing information.",
+          "remember": "Measure scans, joins and aggregates before changing a query blindly.",
+          "tags": [
+            "explain",
+            "profile",
+            "performance"
+          ]
+        }
+      ],
+      "apis": [
+        {
+          "name": "read_parquet",
+          "signature": "read_parquet(path, ...)",
+          "whatFor": "Query Parquet as a relation.",
+          "example": "select * from read_parquet('*.parquet')"
+        },
+        {
+          "name": "COPY",
+          "signature": "COPY (query) TO path (FORMAT PARQUET)",
+          "whatFor": "Export query results.",
+          "example": "copy (...) to 'x.parquet' (format parquet)"
+        },
+        {
+          "name": "EXPLAIN ANALYZE",
+          "signature": "EXPLAIN ANALYZE query",
+          "whatFor": "Execute and inspect query operators/timing.",
+          "example": "EXPLAIN ANALYZE SELECT ..."
+        }
+      ],
+      "practices": [
+        {
+          "title": "Local lake query",
+          "prompt": "Aggregate partitioned Parquet without ingestion.",
+          "pattern": "read_parquet + early filter",
+          "reveal": "Query the glob directly and filter before aggregation."
+        },
+        {
+          "title": "CSV repeatedly queried",
+          "prompt": "A cleaned CSV query will be reused many times.",
+          "pattern": "COPY query to Parquet",
+          "reveal": "Materialize the cleaned query result as compressed Parquet."
+        }
+      ],
+      "tracks": [
+        "data-analyst",
+        "data-engineering"
+      ]
+    },
+    {
+      "id": "delta",
+      "name": "Delta Lake",
+      "group": "Lakehouse",
+      "tagline": "Transactional lakehouse merge and history patterns.",
+      "basics": [
+        {
+          "label": "MERGE",
+          "value": "merge into target using source on ..."
+        },
+        {
+          "label": "History",
+          "value": "describe history table"
+        },
+        {
+          "label": "Time travel",
+          "value": "version as of n"
+        },
+        {
+          "label": "Schema",
+          "value": "Evolve schemas explicitly"
+        }
+      ],
+      "patterns": [
+        {
+          "id": "delta-merge",
+          "title": "Idempotent upsert",
+          "language": "sql",
+          "code": "merge into silver.customers as t\nusing updates as s\non t.customer_id = s.customer_id\nwhen matched and s.updated_at > t.updated_at then\n  update set *\nwhen not matched then\n  insert *;",
+          "why": "MERGE applies insert/update logic atomically.",
+          "remember": "Stable keys and ordering guards matter for CDC.",
+          "tags": [
+            "merge",
+            "cdc"
+          ],
+          "concept": "upsert-by-key"
+        },
+        {
+          "id": "delta-history",
+          "title": "Use table history for reproducible debugging",
+          "language": "sql",
+          "code": "describe history silver.customers;\n\nselect *\nfrom silver.customers\nversion as of 120;",
+          "why": "Transaction history and time travel let you inspect or reproduce a prior table state.",
+          "remember": "When a table changed unexpectedly, identify the commit first, then compare versions.",
+          "tags": [
+            "history",
+            "time-travel",
+            "debugging"
+          ]
+        },
+        {
+          "id": "delta-schema",
+          "title": "Treat schema evolution as an explicit decision",
+          "language": "python",
+          "code": "(\n  updates.write\n  .format(\"delta\")\n  .option(\"mergeSchema\", \"true\")\n  .mode(\"append\")\n  .save(path)\n)",
+          "why": "Delta can evolve schemas, but enabling evolution should be intentional because it changes the table contract.",
+          "remember": "Schema drift is a contract change; review it instead of silently accepting every new column.",
+          "tags": [
+            "schema",
+            "evolution",
+            "contract"
+          ]
+        },
+        {
+          "id": "delta-idempotent-batch",
+          "title": "Replace the same logical batch on retry",
+          "language": "python",
+          "code": "condition = \"event_date = '2026-09-21'\"\n(\n  batch.write\n  .format(\"delta\")\n  .mode(\"overwrite\")\n  .option(\"replaceWhere\", condition)\n  .saveAsTable(\"silver.events\")\n)",
+          "why": "Predicate-scoped replacement can make a deterministic batch retry rewrite only its target partition.",
+          "remember": "A batch rerun should replace its logical slice rather than append duplicates.",
+          "tags": [
+            "idempotency",
+            "partition",
+            "retry"
+          ],
+          "concept": "idempotent-batch"
+        }
+      ],
+      "apis": [
+        {
+          "name": "MERGE INTO",
+          "signature": "MERGE INTO target USING source ON ...",
+          "whatFor": "Atomic upsert/delete logic.",
+          "example": "merge into silver.orders ..."
+        },
+        {
+          "name": "DESCRIBE HISTORY",
+          "signature": "DESCRIBE HISTORY table",
+          "whatFor": "Inspect Delta commits.",
+          "example": "describe history silver.orders"
+        },
+        {
+          "name": "replaceWhere",
+          "signature": "writer.option('replaceWhere', predicate)",
+          "whatFor": "Overwrite only data matching a deterministic predicate.",
+          "example": "option('replaceWhere', \"event_date='2026-09-21'\")"
+        }
+      ],
+      "practices": [
+        {
+          "title": "CDC upsert",
+          "prompt": "Ignore older late updates.",
+          "pattern": "MERGE + ordering guard",
+          "reveal": "Update only when the incoming sequence/timestamp is newer."
+        },
+        {
+          "title": "Retry one failed daily partition",
+          "prompt": "Rerunning must not duplicate already written data.",
+          "pattern": "predicate overwrite",
+          "reveal": "Replace exactly the logical date partition instead of appending."
+        }
+      ],
+      "tracks": [
+        "data-engineering",
+        "cloud-lakehouse"
+      ]
+    },
+    {
+      "id": "bigquery",
+      "name": "BigQuery",
+      "group": "Cloud SQL",
+      "tagline": "Serverless warehouse SQL",
+      "basics": [
+        {
+          "label": "Recall 1",
+          "value": "QUALIFY"
+        },
+        {
+          "label": "Recall 2",
+          "value": "UNNEST"
+        },
+        {
+          "label": "Recall 3",
+          "value": "SAFE_CAST"
+        },
+        {
+          "label": "Recall 4",
+          "value": "partition pruning"
+        }
+      ],
+      "patterns": [
+        {
+          "id": "bigquery-latest-row",
+          "title": "Latest row with QUALIFY",
+          "language": "sql",
+          "code": "select customer_id, status, updated_at\nfrom `analytics.customer_status`\nqualify row_number() over (\n  partition by customer_id\n  order by updated_at desc\n) = 1;",
+          "why": "QUALIFY filters window results without wrapping the query in another CTE.",
+          "remember": "BigQuery latest-row = ROW_NUMBER + QUALIFY.",
+          "tags": [
+            "qualify",
+            "window",
+            "latest"
+          ],
+          "concept": "latest-row"
+        },
+        {
+          "id": "bigquery-merge-upsert",
+          "title": "Upsert with MERGE",
+          "language": "sql",
+          "code": "merge `analytics.customers` t\nusing staging_customers s\non t.customer_id = s.customer_id\nwhen matched and s.updated_at > t.updated_at then\n  update set name = s.name, updated_at = s.updated_at\nwhen not matched then\n  insert (customer_id, name, updated_at)\n  values (s.customer_id, s.name, s.updated_at);",
+          "why": "MERGE expresses insert/update logic in one atomic warehouse statement.",
+          "remember": "Match on the stable business key and guard updates with ordering when source events can arrive late.",
+          "tags": [
+            "merge",
+            "upsert",
+            "cdc"
+          ],
+          "concept": "upsert-by-key"
+        },
+        {
+          "id": "bigquery-unnest",
+          "title": "Flatten repeated fields with UNNEST",
+          "language": "sql",
+          "code": "select\n  order_id,\n  item.sku,\n  item.quantity\nfrom `raw.orders`\ncross join unnest(items) as item;",
+          "why": "UNNEST converts array elements into rows so nested records can participate in relational operations.",
+          "remember": "Every UNNEST can multiply rows; validate cardinality before aggregating.",
+          "tags": [
+            "unnest",
+            "array",
+            "nested-data"
+          ]
+        },
+        {
+          "id": "bigquery-partition",
+          "title": "Prune partitions explicitly",
+          "language": "sql",
+          "code": "select customer_id, sum(amount) as revenue\nfrom `analytics.orders`\nwhere order_date between date '2026-09-01' and date '2026-09-21'\ngroup by customer_id;",
+          "why": "Filtering on the partitioning column limits scanned partitions and usually reduces cost and latency.",
+          "remember": "Partition filters are both a correctness boundary and a cost-control habit.",
+          "tags": [
+            "partition",
+            "cost",
+            "filter"
+          ]
+        },
+        {
+          "id": "bigquery-safe-cast",
+          "title": "Make dirty casts non-fatal",
+          "language": "sql",
+          "code": "select\n  safe_cast(raw_customer_id as int64) as customer_id,\n  safe_cast(raw_amount as numeric) as amount\nfrom landing.orders;",
+          "why": "SAFE_CAST returns NULL rather than aborting the whole query when a value cannot be converted.",
+          "remember": "Use safe casts at dirty ingestion boundaries, then measure and handle the resulting NULLs.",
+          "tags": [
+            "safe-cast",
+            "quality",
+            "ingestion"
+          ]
+        }
+      ],
+      "apis": [
+        {
+          "name": "QUALIFY",
+          "signature": "QUALIFY boolean_expression",
+          "whatFor": "Filter after window functions are evaluated.",
+          "example": "QUALIFY ROW_NUMBER() OVER (...) = 1"
+        },
+        {
+          "name": "UNNEST",
+          "signature": "UNNEST(array_expression)",
+          "whatFor": "Expand repeated array values into rows.",
+          "example": "CROSS JOIN UNNEST(items) AS item"
+        },
+        {
+          "name": "SAFE_CAST",
+          "signature": "SAFE_CAST(expr AS type)",
+          "whatFor": "Return NULL rather than fail invalid casts.",
+          "example": "SAFE_CAST(raw_id AS INT64)"
+        }
+      ],
+      "practices": [
+        {
+          "title": "Nested order lines",
+          "prompt": "Orders contain an array of item structs. Compute revenue by SKU.",
+          "pattern": "UNNEST + aggregate",
+          "reveal": "UNNEST items first, compute line revenue, then group by SKU."
+        },
+        {
+          "title": "Latest customer snapshot",
+          "prompt": "Keep the latest record per customer without a wrapper CTE.",
+          "pattern": "ROW_NUMBER + QUALIFY",
+          "reveal": "Use ROW_NUMBER over customer_id ordered by updated_at descending and QUALIFY = 1."
+        }
+      ],
+      "tracks": [
+        "bi-warehousing",
+        "cloud-lakehouse"
+      ]
+    },
+    {
+      "id": "snowflake",
+      "name": "Snowflake",
+      "group": "Cloud SQL",
+      "tagline": "Warehouse SQL and semi-structured data",
+      "basics": [
+        {
+          "label": "Recall 1",
+          "value": "QUALIFY"
+        },
+        {
+          "label": "Recall 2",
+          "value": "VARIANT"
+        },
+        {
+          "label": "Recall 3",
+          "value": "FLATTEN"
+        },
+        {
+          "label": "Recall 4",
+          "value": "TRY_CAST"
+        }
+      ],
+      "patterns": [
+        {
+          "id": "snowflake-latest-row",
+          "title": "Latest row with QUALIFY",
+          "language": "sql",
+          "code": "select customer_id, status, updated_at\nfrom analytics.customer_status\nqualify row_number() over (\n  partition by customer_id\n  order by updated_at desc\n) = 1;",
+          "why": "Snowflake QUALIFY applies after analytical windows and keeps the query flat.",
+          "remember": "Snowflake and BigQuery share the same QUALIFY mental model.",
+          "tags": [
+            "qualify",
+            "window",
+            "latest"
+          ],
+          "concept": "latest-row"
+        },
+        {
+          "id": "snowflake-merge-upsert",
+          "title": "Upsert with MERGE",
+          "language": "sql",
+          "code": "merge into analytics.customers t\nusing staging_customers s\non t.customer_id = s.customer_id\nwhen matched and s.updated_at > t.updated_at then\n  update set name = s.name, updated_at = s.updated_at\nwhen not matched then\n  insert (customer_id, name, updated_at)\n  values (s.customer_id, s.name, s.updated_at);",
+          "why": "Snowflake MERGE handles matched and unmatched rows in a single statement.",
+          "remember": "Deduplicate the source before MERGE when multiple source rows can target the same key.",
+          "tags": [
+            "merge",
+            "upsert",
+            "cdc"
+          ],
+          "concept": "upsert-by-key"
+        },
+        {
+          "id": "snowflake-variant",
+          "title": "Project typed columns from VARIANT",
+          "language": "sql",
+          "code": "select\n  payload:customer:id::string as customer_id,\n  payload:amount::number(18,2) as amount\nfrom raw_events\nwhere payload:type::string = 'order';",
+          "why": "VARIANT lets semi-structured data land quickly while typed projections create a stable downstream contract.",
+          "remember": "Keep raw flexibility at landing; cast into stable types at the semantic boundary.",
+          "tags": [
+            "variant",
+            "json",
+            "typing"
+          ]
+        },
+        {
+          "id": "snowflake-flatten",
+          "title": "Expand nested arrays with FLATTEN",
+          "language": "sql",
+          "code": "select\n  o.order_id,\n  item.value:sku::string as sku,\n  item.value:qty::number as qty\nfrom orders o,\nlateral flatten(input => o.payload:items) item;",
+          "why": "FLATTEN turns array/object members into rows while retaining correlation to the source row.",
+          "remember": "FLATTEN changes row cardinality—check counts before and after.",
+          "tags": [
+            "flatten",
+            "variant",
+            "nested-data"
+          ]
+        },
+        {
+          "id": "snowflake-try-cast",
+          "title": "Quarantine invalid values with TRY conversions",
+          "language": "sql",
+          "code": "select\n  try_to_number(raw_amount, 18, 2) as amount,\n  try_to_timestamp_ntz(raw_ts) as event_ts\nfrom landing.events;",
+          "why": "TRY conversion functions return NULL for invalid values instead of failing the entire statement.",
+          "remember": "Use TRY_* at ingestion boundaries, then profile invalid NULL outcomes separately.",
+          "tags": [
+            "try-cast",
+            "quality",
+            "ingestion"
+          ]
+        }
+      ],
+      "apis": [
+        {
+          "name": "FLATTEN",
+          "signature": "FLATTEN(INPUT => expr)",
+          "whatFor": "Expand arrays/objects from VARIANT values.",
+          "example": "LATERAL FLATTEN(INPUT => payload:items)"
+        },
+        {
+          "name": "QUALIFY",
+          "signature": "QUALIFY predicate",
+          "whatFor": "Filter rows after analytical windows.",
+          "example": "QUALIFY ROW_NUMBER() OVER (...) = 1"
+        },
+        {
+          "name": "TRY_TO_NUMBER",
+          "signature": "TRY_TO_NUMBER(expr [, format])",
+          "whatFor": "Convert dirty numeric text without failing the statement.",
+          "example": "TRY_TO_NUMBER(raw_amount, 18, 2)"
+        }
+      ],
+      "practices": [
+        {
+          "title": "Flatten nested items",
+          "prompt": "Extract one row per item from a VARIANT order payload.",
+          "pattern": "LATERAL FLATTEN",
+          "reveal": "Flatten payload:items and cast item.value fields to stable types."
+        },
+        {
+          "title": "Safe landing conversion",
+          "prompt": "Some numeric strings are invalid but the load should continue.",
+          "pattern": "TRY conversion + quality check",
+          "reveal": "Use TRY_TO_NUMBER, then measure rows where the result is NULL."
+        }
+      ],
+      "tracks": [
+        "bi-warehousing",
+        "cloud-lakehouse"
+      ]
+    },
+    {
+      "id": "tsql",
+      "name": "T-SQL",
+      "group": "SQL Dialects",
+      "tagline": "SQL Server patterns",
+      "basics": [
+        {
+          "label": "Recall 1",
+          "value": "TOP"
+        },
+        {
+          "label": "Recall 2",
+          "value": "APPLY"
+        },
+        {
+          "label": "Recall 3",
+          "value": "temp tables"
+        },
+        {
+          "label": "Recall 4",
+          "value": "TRY_CONVERT"
+        }
+      ],
+      "patterns": [
+        {
+          "id": "tsql-latest-row",
+          "title": "Latest child row with OUTER APPLY",
+          "language": "sql",
+          "code": "select c.customer_id, x.status, x.updated_at\nfrom dbo.customer c\nouter apply (\n  select top (1) s.status, s.updated_at\n  from dbo.customer_status s\n  where s.customer_id = c.customer_id\n  order by s.updated_at desc\n) x;",
+          "why": "OUTER APPLY is a useful SQL Server-specific top-one-per-parent shape.",
+          "remember": "Use OUTER APPLY when you want the parent preserved even without a child row.",
+          "tags": [
+            "apply",
+            "top",
+            "latest"
+          ],
+          "concept": "latest-row"
+        },
+        {
+          "id": "tsql-apply",
+          "title": "Top child per parent with OUTER APPLY",
+          "language": "sql",
+          "code": "select\n  c.customer_id,\n  x.order_id,\n  x.order_date\nfrom dbo.customer c\nouter apply (\n  select top (1) o.order_id, o.order_date\n  from dbo.orders o\n  where o.customer_id = c.customer_id\n  order by o.order_date desc\n) x;",
+          "why": "APPLY is useful for correlated table expressions such as top-N related rows.",
+          "remember": "OUTER APPLY preserves the parent even when the correlated expression returns no row.",
+          "tags": [
+            "apply",
+            "top",
+            "correlated"
+          ]
+        },
+        {
+          "id": "tsql-temp",
+          "title": "Materialize a reusable intermediate into a temp table",
+          "language": "sql",
+          "code": "select customer_id, sum(amount) as revenue\ninto #revenue\nfrom dbo.orders\ngroup by customer_id;\n\ncreate index IX_revenue_customer\non #revenue(customer_id);",
+          "why": "A temp table can clarify multi-step procedures and can be indexed when the intermediate is reused.",
+          "remember": "Materialize when reuse, statistics or debugging justify it—not for every CTE.",
+          "tags": [
+            "temp-table",
+            "index",
+            "procedure"
+          ]
+        },
+        {
+          "id": "tsql-try-convert",
+          "title": "Convert dirty input without aborting the batch",
+          "language": "sql",
+          "code": "select\n  try_convert(date, raw_order_date) as order_date,\n  try_convert(decimal(18,2), raw_amount) as amount\nfrom staging.orders;",
+          "why": "TRY_CONVERT returns NULL for invalid inputs and lets the batch continue.",
+          "remember": "Safe conversion is useful at staging boundaries; invalid NULLs still need quality checks.",
+          "tags": [
+            "try-convert",
+            "quality",
+            "staging"
+          ]
+        },
+        {
+          "id": "tsql-running-total",
+          "title": "Running total with an ordered window",
+          "language": "sql",
+          "code": "select\n  customer_id,\n  order_date,\n  sum(amount) over (\n    partition by customer_id\n    order by order_date\n    rows between unbounded preceding and current row\n  ) as running_revenue\nfrom dbo.orders;",
+          "why": "An explicit ROWS frame makes the cumulative window semantics visible.",
+          "remember": "Partition chooses the entity; order chooses sequence; frame chooses which rows contribute.",
+          "tags": [
+            "window",
+            "running-total",
+            "rows-frame"
+          ]
+        }
+      ],
+      "apis": [
+        {
+          "name": "OUTER APPLY",
+          "signature": "left_input OUTER APPLY table_expression",
+          "whatFor": "Run a correlated table expression while preserving left rows.",
+          "example": "OUTER APPLY (SELECT TOP (1) ...) x"
+        },
+        {
+          "name": "TRY_CONVERT",
+          "signature": "TRY_CONVERT(type, expression)",
+          "whatFor": "Convert invalid input to NULL rather than failing.",
+          "example": "TRY_CONVERT(date, raw_date)"
+        },
+        {
+          "name": "STRING_AGG",
+          "signature": "STRING_AGG(expression, separator)",
+          "whatFor": "Concatenate grouped values.",
+          "example": "STRING_AGG(name, ', ')"
+        }
+      ],
+      "practices": [
+        {
+          "title": "Latest order per customer",
+          "prompt": "Return every customer and their newest order, including customers with no orders.",
+          "pattern": "OUTER APPLY + TOP (1)",
+          "reveal": "Correlate an ordered TOP (1) subquery through OUTER APPLY."
+        },
+        {
+          "title": "Reusable heavy intermediate",
+          "prompt": "A procedure reuses the same grouped result three times.",
+          "pattern": "Temp table + index",
+          "reveal": "Materialize into #temp and index the join key if repeated use justifies it."
+        }
+      ],
+      "tracks": [
+        "data-analyst",
+        "bi-warehousing"
+      ]
+    },
+    {
+      "id": "postgres",
+      "name": "PostgreSQL",
+      "group": "SQL Dialects",
+      "tagline": "Postgres patterns",
+      "basics": [
+        {
+          "label": "Recall 1",
+          "value": "ON CONFLICT"
+        },
+        {
+          "label": "Recall 2",
+          "value": "DISTINCT ON"
+        },
+        {
+          "label": "Recall 3",
+          "value": "JSONB"
+        },
+        {
+          "label": "Recall 4",
+          "value": "EXPLAIN ANALYZE"
+        }
+      ],
+      "patterns": [
+        {
+          "id": "postgres-latest-row",
+          "title": "Latest row with DISTINCT ON",
+          "language": "sql",
+          "code": "select distinct on (customer_id)\n  customer_id, status, updated_at\nfrom customer_status\norder by customer_id, updated_at desc;",
+          "why": "PostgreSQL DISTINCT ON is a concise top-one-per-group idiom.",
+          "remember": "ORDER BY must start with the DISTINCT ON key, then define the winner.",
+          "tags": [
+            "distinct-on",
+            "latest",
+            "postgres"
+          ],
+          "concept": "latest-row"
+        },
+        {
+          "id": "postgres-upsert",
+          "title": "Upsert with ON CONFLICT",
+          "language": "sql",
+          "code": "insert into customers (customer_id, name, updated_at)\nvalues ($1, $2, $3)\non conflict (customer_id) do update\nset name = excluded.name,\n    updated_at = excluded.updated_at\nwhere excluded.updated_at > customers.updated_at;",
+          "why": "PostgreSQL ON CONFLICT is the canonical insert-or-update shape for a unique key.",
+          "remember": "The conflict target must be backed by a unique constraint/index.",
+          "tags": [
+            "upsert",
+            "on-conflict",
+            "cdc"
+          ],
+          "concept": "upsert-by-key"
+        },
+        {
+          "id": "postgres-jsonb",
+          "title": "Project fields from JSONB",
+          "language": "sql",
+          "code": "select\n  payload ->> 'event_type' as event_type,\n  payload #>> '{customer,id}' as customer_id\nfrom raw_events;",
+          "why": "JSONB operators let you extract scalar values while preserving the original semi-structured payload.",
+          "remember": "Use -> for JSON, ->> for text, and #>> for a nested text path.",
+          "tags": [
+            "jsonb",
+            "semi-structured",
+            "operators"
+          ]
+        },
+        {
+          "id": "postgres-explain",
+          "title": "Inspect actual plan and buffer use",
+          "language": "sql",
+          "code": "explain (analyze, buffers)\nselect customer_id, sum(amount)\nfrom orders\nwhere order_date >= current_date - 30\ngroup by customer_id;",
+          "why": "Actual execution plus buffer statistics show whether time is spent scanning, joining, sorting or reading pages.",
+          "remember": "Check the real plan before adding an index or rewriting the query.",
+          "tags": [
+            "explain",
+            "buffers",
+            "performance"
+          ]
+        },
+        {
+          "id": "postgres-lateral",
+          "title": "Correlate a top-N subquery with LATERAL",
+          "language": "sql",
+          "code": "select c.customer_id, o.order_id, o.order_date\nfrom customer c\nleft join lateral (\n  select order_id, order_date\n  from orders o\n  where o.customer_id = c.customer_id\n  order by order_date desc\n  limit 1\n) o on true;",
+          "why": "LATERAL allows a subquery in FROM to reference columns from rows produced earlier in the FROM list.",
+          "remember": "Use LATERAL when each parent row needs its own small correlated relation.",
+          "tags": [
+            "lateral",
+            "correlated",
+            "top-n"
+          ]
+        }
+      ],
+      "apis": [
+        {
+          "name": "ON CONFLICT",
+          "signature": "INSERT ... ON CONFLICT (...) DO ...",
+          "whatFor": "Implement native upsert against a unique constraint.",
+          "example": "ON CONFLICT (id) DO UPDATE SET ..."
+        },
+        {
+          "name": "EXPLAIN ANALYZE",
+          "signature": "EXPLAIN (ANALYZE, BUFFERS) query",
+          "whatFor": "Inspect the actual execution plan and buffer activity.",
+          "example": "EXPLAIN (ANALYZE, BUFFERS) SELECT ..."
+        },
+        {
+          "name": "JSONB operators",
+          "signature": "-> / ->> / #>>",
+          "whatFor": "Read JSONB values as JSON or text paths.",
+          "example": "payload #>> '{customer,id}'"
+        }
+      ],
+      "practices": [
+        {
+          "title": "Idempotent event sink",
+          "prompt": "Load events keyed by event_id without duplicate inserts.",
+          "pattern": "Unique key + ON CONFLICT",
+          "reveal": "Create a unique constraint and use DO NOTHING or DO UPDATE according to semantics."
+        },
+        {
+          "title": "Slow filtered aggregation",
+          "prompt": "A query became slow as orders grew.",
+          "pattern": "EXPLAIN ANALYZE + BUFFERS",
+          "reveal": "Inspect the real scan/aggregate plan before proposing an index."
+        }
+      ],
+      "tracks": [
+        "data-analyst",
+        "bi-warehousing"
+      ]
+    },
+    {
+      "id": "mysql",
+      "name": "MySQL",
+      "group": "SQL Dialects",
+      "tagline": "MySQL patterns",
+      "basics": [
+        {
+          "label": "Recall 1",
+          "value": "ON DUPLICATE KEY"
+        },
+        {
+          "label": "Recall 2",
+          "value": "JSON_EXTRACT"
+        },
+        {
+          "label": "Recall 3",
+          "value": "window functions"
+        },
+        {
+          "label": "Recall 4",
+          "value": "EXPLAIN ANALYZE"
+        }
+      ],
+      "patterns": [
+        {
+          "id": "mysql-latest-row",
+          "title": "Latest row with ROW_NUMBER",
+          "language": "sql",
+          "code": "with ranked as (\n  select s.*,\n    row_number() over (\n      partition by customer_id\n      order by updated_at desc\n    ) as rn\n  from customer_status s\n)\nselect * from ranked where rn = 1;",
+          "why": "Window ranking keeps all columns from the winning record.",
+          "remember": "Use ROW_NUMBER when you need the complete latest row, not only MAX(timestamp).",
+          "tags": [
+            "window",
+            "latest",
+            "mysql"
+          ],
+          "concept": "latest-row"
+        },
+        {
+          "id": "mysql-upsert",
+          "title": "Upsert on a unique-key collision",
+          "language": "sql",
+          "code": "insert into customer(customer_id, name, updated_at)\nvalues (?, ?, ?)\non duplicate key update\n  name = values(name),\n  updated_at = values(updated_at);",
+          "why": "A duplicate-key clause turns a unique-key conflict into an update path.",
+          "remember": "The unique key defines the conflict boundary; be explicit about fields allowed to change.",
+          "tags": [
+            "upsert",
+            "duplicate-key",
+            "idempotency"
+          ],
+          "concept": "upsert-by-key"
+        },
+        {
+          "id": "mysql-json",
+          "title": "Read typed values from JSON",
+          "language": "sql",
+          "code": "select\n  json_unquote(json_extract(payload, '$.event_type')) as event_type,\n  json_extract(payload, '$.amount') as amount\nfrom raw_events;",
+          "why": "JSON functions allow semi-structured payloads to coexist with relational columns.",
+          "remember": "Extract intentionally and cast/validate values before downstream arithmetic or joins.",
+          "tags": [
+            "json",
+            "json-extract",
+            "semi-structured"
+          ]
+        },
+        {
+          "id": "mysql-explain",
+          "title": "Use EXPLAIN ANALYZE before guessing",
+          "language": "sql",
+          "code": "explain analyze\nselect customer_id, sum(amount)\nfrom orders\nwhere order_date >= current_date - interval 30 day\ngroup by customer_id;",
+          "why": "The execution plan shows access paths and actual operator timing for the query.",
+          "remember": "Observe the plan first; indexes are a response to access patterns, not a default fix.",
+          "tags": [
+            "explain",
+            "performance",
+            "index"
+          ]
+        }
+      ],
+      "apis": [
+        {
+          "name": "ROW_NUMBER",
+          "signature": "ROW_NUMBER() OVER (...)",
+          "whatFor": "Rank rows within a partition.",
+          "example": "ROW_NUMBER() OVER (PARTITION BY id ORDER BY ts DESC)"
+        },
+        {
+          "name": "JSON_EXTRACT",
+          "signature": "JSON_EXTRACT(json_doc, path)",
+          "whatFor": "Read values from JSON documents.",
+          "example": "JSON_EXTRACT(payload, '$.customer.id')"
+        },
+        {
+          "name": "EXPLAIN ANALYZE",
+          "signature": "EXPLAIN ANALYZE query",
+          "whatFor": "Inspect actual query execution.",
+          "example": "EXPLAIN ANALYZE SELECT ..."
+        }
+      ],
+      "practices": [
+        {
+          "title": "Latest complete status row",
+          "prompt": "Return every column from the newest status per customer.",
+          "pattern": "ROW_NUMBER",
+          "reveal": "Rank by updated_at descending inside customer partitions and keep rn=1."
+        },
+        {
+          "title": "Dirty event payload",
+          "prompt": "Extract JSON amount values before aggregation.",
+          "pattern": "JSON extraction + validation",
+          "reveal": "Extract the path, cast/validate it, and profile malformed rows."
+        }
+      ],
+      "tracks": [
+        "data-analyst",
+        "bi-warehousing"
+      ]
+    },
+    {
+      "id": "fastapi",
+      "name": "FastAPI",
+      "group": "API",
+      "tagline": "Typed Python API patterns",
+      "basics": [
+        {
+          "label": "Recall 1",
+          "value": "Pydantic"
+        },
+        {
+          "label": "Recall 2",
+          "value": "Depends"
+        },
+        {
+          "label": "Recall 3",
+          "value": "response models"
+        },
+        {
+          "label": "Recall 4",
+          "value": "HTTPException"
+        }
+      ],
+      "patterns": [
+        {
+          "id": "fastapi-depends",
+          "title": "Inject request-scoped dependencies",
+          "language": "python",
+          "code": "def get_session():\n    with Session(engine) as session:\n        yield session\n\n@app.get(\"/orders/{order_id}\")\ndef get_order(\n    order_id: int,\n    session: Session = Depends(get_session),\n):\n    return load_order(session, order_id)",
+          "why": "Dependency injection keeps connection/session lifecycle out of route business logic and makes dependencies replaceable in tests.",
+          "remember": "Use Depends for request-scoped infrastructure and reusable boundary checks.",
+          "tags": [
+            "dependency-injection",
+            "session",
+            "testing"
+          ]
+        },
+        {
+          "id": "fastapi-response-model",
+          "title": "Separate input and response contracts",
+          "language": "python",
+          "code": "class OrderIn(BaseModel):\n    customer_id: int\n    amount: Decimal\n\nclass OrderOut(OrderIn):\n    id: int\n    status: str\n\n@app.post(\"/orders\", response_model=OrderOut, status_code=201)\ndef create_order(payload: OrderIn):\n    return service.create(payload)",
+          "why": "Explicit request/response models make the public API contract clearer than leaking internal persistence objects.",
+          "remember": "Validate at the HTTP boundary; return a deliberately shaped response model.",
+          "tags": [
+            "pydantic",
+            "response-model",
+            "contract"
+          ]
+        },
+        {
+          "id": "fastapi-background",
+          "title": "Defer small after-response work",
+          "language": "python",
+          "code": "@app.post(\"/orders/{order_id}/confirm\")\ndef confirm(order_id: int, background_tasks: BackgroundTasks):\n    order = service.confirm(order_id)\n    background_tasks.add_task(send_confirmation, order.id)\n    return {\"status\": \"confirmed\"}",
+          "why": "BackgroundTasks is suitable for lightweight work that can happen after the response in the same application process.",
+          "remember": "Use it for small after-response tasks; use an external worker/queue for heavy or distributed jobs.",
+          "tags": [
+            "background-tasks",
+            "api",
+            "async-boundary"
+          ]
+        },
+        {
+          "id": "fastapi-exception-map",
+          "title": "Map domain errors at the HTTP boundary",
+          "language": "python",
+          "code": "@app.exception_handler(CustomerNotFound)\nasync def customer_not_found(_, exc):\n    return JSONResponse(\n        status_code=404,\n        content={\"detail\": str(exc)},\n    )",
+          "why": "A centralized exception handler prevents HTTP details from leaking through service/domain code.",
+          "remember": "Domain code raises domain errors; the API boundary decides the HTTP status and response shape.",
+          "tags": [
+            "errors",
+            "exception-handler",
+            "boundary"
+          ]
+        }
+      ],
+      "apis": [
+        {
+          "name": "Depends",
+          "signature": "Depends(callable)",
+          "whatFor": "Inject request-scoped or reusable dependencies.",
+          "example": "session: Session = Depends(get_session)"
+        },
+        {
+          "name": "BackgroundTasks",
+          "signature": "background_tasks.add_task(func, *args)",
+          "whatFor": "Run small same-process work after the response.",
+          "example": "background_tasks.add_task(send_email, order_id)"
+        },
+        {
+          "name": "response_model",
+          "signature": "@app.get(..., response_model=Model)",
+          "whatFor": "Declare and filter the public response contract.",
+          "example": "@app.get('/orders/{id}', response_model=OrderOut)"
+        }
+      ],
+      "practices": [
+        {
+          "title": "Database-backed route",
+          "prompt": "Use a DB session without global mutable state.",
+          "pattern": "Depends + yielded session",
+          "reveal": "Inject the session with Depends and close it through the dependency lifecycle."
+        },
+        {
+          "title": "Confirmation email",
+          "prompt": "Return an HTTP response before a small email task finishes.",
+          "pattern": "BackgroundTasks",
+          "reveal": "Schedule the small same-process task after committing the request work."
+        }
+      ],
+      "tracks": [
+        "data-engineering",
+        "devops"
+      ]
+    },
+    {
+      "id": "kubernetes",
+      "name": "Kubernetes",
+      "group": "Platform",
+      "tagline": "Container orchestration patterns",
+      "basics": [
+        {
+          "label": "Recall 1",
+          "value": "Deployment"
+        },
+        {
+          "label": "Recall 2",
+          "value": "Service"
+        },
+        {
+          "label": "Recall 3",
+          "value": "probes"
+        },
+        {
+          "label": "Recall 4",
+          "value": "requests and limits"
+        }
+      ],
+      "patterns": [
+        {
+          "id": "k8s-probes",
+          "title": "Use startup, readiness and liveness for different questions",
+          "language": "yaml",
+          "code": "startupProbe:\n  httpGet: { path: /startup, port: 8000 }\n  failureThreshold: 30\n  periodSeconds: 2\nreadinessProbe:\n  httpGet: { path: /ready, port: 8000 }\nlivenessProbe:\n  httpGet: { path: /live, port: 8000 }",
+          "why": "Startup delays liveness/readiness until initialization succeeds; readiness controls traffic; liveness controls restarts.",
+          "remember": "Ready means receive traffic. Live means restart me if false. Startup protects slow initialization.",
+          "tags": [
+            "probes",
+            "health",
+            "pod"
+          ],
+          "concept": "container-health"
+        },
+        {
+          "id": "k8s-resources",
+          "title": "Set requests before tuning limits",
+          "language": "yaml",
+          "code": "resources:\n  requests:\n    cpu: \"250m\"\n    memory: 256Mi\n  limits:\n    memory: 512Mi",
+          "why": "Requests inform scheduling and reserved capacity; limits constrain runtime consumption.",
+          "remember": "Requests answer 'what do I need to schedule?'; limits answer 'how far may I go?'.",
+          "tags": [
+            "resources",
+            "requests",
+            "limits"
+          ]
+        },
+        {
+          "id": "k8s-config",
+          "title": "Separate configuration from the image",
+          "language": "yaml",
+          "code": "env:\n  - name: LOG_LEVEL\n    valueFrom:\n      configMapKeyRef:\n        name: api-config\n        key: log_level\n  - name: DATABASE_PASSWORD\n    valueFrom:\n      secretKeyRef:\n        name: api-secret\n        key: password",
+          "why": "Environment-specific configuration should not require rebuilding the container image.",
+          "remember": "ConfigMap for ordinary config; Secret for sensitive values; keep both outside the image.",
+          "tags": [
+            "configmap",
+            "secret",
+            "configuration"
+          ]
+        },
+        {
+          "id": "k8s-deployment",
+          "title": "Deploy immutable versions through a Deployment",
+          "language": "yaml",
+          "code": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: api\nspec:\n  replicas: 3\n  selector:\n    matchLabels: { app: api }\n  template:\n    metadata:\n      labels: { app: api }\n    spec:\n      containers:\n        - name: api\n          image: example/api:1.4.2",
+          "why": "A Deployment manages ReplicaSets and rolls the desired pod template toward the declared version.",
+          "remember": "Change the immutable image version in desired state; let the controller reconcile replicas.",
+          "tags": [
+            "deployment",
+            "rollout",
+            "desired-state"
+          ]
+        },
+        {
+          "id": "k8s-rollout-debug",
+          "title": "Observe a Deployment rollout before undoing it",
+          "language": "bash",
+          "code": "kubectl rollout status deployment/api\nkubectl rollout history deployment/api\nkubectl get pods -l app=api\nkubectl describe pod <failing-pod>\nkubectl rollout undo deployment/api",
+          "why": "Rollout status/history plus pod events separates an image/config failure from a controller problem before rollback.",
+          "remember": "Status -> failing pods/events -> history -> undo only when the new revision is the cause.",
+          "tags": [
+            "rollout",
+            "deployment",
+            "debugging"
+          ]
+        },
+        {
+          "id": "k8s-service-debug",
+          "title": "Trace Service routing to ready endpoints",
+          "language": "bash",
+          "code": "kubectl get service api\nkubectl get endpointslices -l kubernetes.io/service-name=api\nkubectl get pods -l app=api -o wide\nkubectl logs deployment/api --tail=100",
+          "why": "A Service can exist while selecting no ready endpoints, so routing diagnosis should inspect selectors, endpoint slices and pod readiness together.",
+          "remember": "Service -> selector -> EndpointSlice -> ready pod -> application logs.",
+          "tags": [
+            "service",
+            "network",
+            "debugging"
+          ]
+        }
+      ],
+      "apis": [
+        {
+          "name": "kubectl get",
+          "signature": "kubectl get RESOURCE [-n namespace]",
+          "whatFor": "List current Kubernetes resources.",
+          "example": "kubectl get pods -n data"
+        },
+        {
+          "name": "kubectl describe",
+          "signature": "kubectl describe RESOURCE name",
+          "whatFor": "Inspect desired/current state and recent events.",
+          "example": "kubectl describe pod api-abc"
+        },
+        {
+          "name": "kubectl logs",
+          "signature": "kubectl logs POD [-c container]",
+          "whatFor": "Read container logs.",
+          "example": "kubectl logs deploy/api"
+        }
+      ],
+      "practices": [
+        {
+          "title": "Slow-starting API",
+          "prompt": "The application needs 45 seconds to initialize and liveness keeps restarting it.",
+          "pattern": "startupProbe + readiness/liveness",
+          "reveal": "Use startupProbe to protect initialization, readiness for traffic and liveness for deadlock recovery."
+        },
+        {
+          "title": "Unschedulable pods",
+          "prompt": "A Deployment stays Pending after a resource change.",
+          "pattern": "requests + scheduler diagnosis",
+          "reveal": "Inspect pod events and compare requests with available node capacity."
+        }
+      ],
+      "tracks": [
+        "devops"
+      ]
+    },
+    {
+      "id": "linux",
+      "name": "Linux",
+      "group": "Platform",
+      "tagline": "Files, processes, services and networking",
+      "basics": [
+        {
+          "label": "Recall 1",
+          "value": "find"
+        },
+        {
+          "label": "Recall 2",
+          "value": "grep"
+        },
+        {
+          "label": "Recall 3",
+          "value": "journalctl"
+        },
+        {
+          "label": "Recall 4",
+          "value": "ss"
+        },
+        {
+          "label": "Recall 5",
+          "value": "lsof"
+        }
+      ],
+      "patterns": [
+        {
+          "id": "linux-journal",
+          "title": "Trace a failing service from logs",
+          "language": "bash",
+          "code": "systemctl status api.service\njournalctl -u api.service --since \"30 minutes ago\"\njournalctl -u api.service -f",
+          "why": "systemd status gives current unit state; journalctl gives the timeline needed to explain the failure.",
+          "remember": "State tells you what; logs usually tell you why.",
+          "tags": [
+            "systemd",
+            "journalctl",
+            "logs"
+          ]
+        },
+        {
+          "id": "linux-port",
+          "title": "Find the process owning a port",
+          "language": "bash",
+          "code": "ss -ltnp\nlsof -i :8000\nps -fp <pid>",
+          "why": "Binding failures are usually easier to solve by identifying the listener than by repeatedly changing application settings.",
+          "remember": "socket -> PID -> process -> decide whether to stop it or change the port.",
+          "tags": [
+            "network",
+            "process",
+            "debugging"
+          ],
+          "concept": "process-inspection"
+        },
+        {
+          "id": "linux-permissions",
+          "title": "Diagnose file ownership and permissions",
+          "language": "bash",
+          "code": "ls -ld /srv/app /srv/app/config.yaml\nnamei -l /srv/app/config.yaml\nstat /srv/app/config.yaml\nid apiuser",
+          "why": "Permission failures depend on ownership and execute/read bits across the entire path, not only the final file.",
+          "remember": "Check identity, ownership and every directory in the path before reaching for chmod 777.",
+          "tags": [
+            "permissions",
+            "ownership",
+            "filesystem"
+          ]
+        },
+        {
+          "id": "linux-disk",
+          "title": "Find what is consuming disk space",
+          "language": "bash",
+          "code": "df -h\ndu -xhd1 /var | sort -h\nfind /var/log -type f -size +500M -ls",
+          "why": "df shows filesystem pressure; du and find narrow the usage to directories and large files.",
+          "remember": "Filesystem full -> df; where did it go -> du/find.",
+          "tags": [
+            "disk",
+            "filesystem",
+            "debugging"
+          ]
+        },
+        {
+          "id": "linux-signals",
+          "title": "Stop a process gracefully before forcing it",
+          "language": "bash",
+          "code": "ps -fp <pid>\nkill -TERM <pid>\nsleep 5\nps -p <pid>\nkill -KILL <pid>  # only if graceful shutdown failed",
+          "why": "SIGTERM gives the application a chance to flush state and release resources; SIGKILL does not.",
+          "remember": "Inspect -> TERM -> verify -> KILL only as a last resort.",
+          "tags": [
+            "process",
+            "signals",
+            "operations"
+          ]
+        }
+      ],
+      "apis": [
+        {
+          "name": "journalctl",
+          "signature": "journalctl [options]",
+          "whatFor": "Query systemd logs.",
+          "example": "journalctl -u api.service --since today"
+        },
+        {
+          "name": "ss",
+          "signature": "ss -ltnp",
+          "whatFor": "Inspect listening TCP sockets and owning processes.",
+          "example": "ss -ltnp"
+        },
+        {
+          "name": "find",
+          "signature": "find PATH predicates...",
+          "whatFor": "Locate files by type/name/time or other metadata.",
+          "example": "find . -type f -name '*.log'"
+        }
+      ],
+      "practices": [
+        {
+          "title": "Port already in use",
+          "prompt": "An API cannot bind to port 8000.",
+          "pattern": "ss/lsof + process inspection",
+          "reveal": "Identify the listener, trace the PID, then decide whether to stop it or change the port."
+        },
+        {
+          "title": "Service crashes after deploy",
+          "prompt": "A systemd service immediately exits.",
+          "pattern": "systemctl + journalctl",
+          "reveal": "Check service state, then inspect the recent unit journal for the root error."
+        }
+      ],
+      "tracks": [
+        "devops"
+      ]
+    },
+    {
+      "id": "powershell",
+      "name": "PowerShell",
+      "group": "Platform",
+      "tagline": "Object-oriented shell automation",
+      "basics": [
+        {
+          "label": "Recall 1",
+          "value": "Where-Object"
+        },
+        {
+          "label": "Recall 2",
+          "value": "Select-Object"
+        },
+        {
+          "label": "Recall 3",
+          "value": "Invoke-RestMethod"
+        },
+        {
+          "label": "Recall 4",
+          "value": "-ErrorAction Stop + try/catch"
+        }
+      ],
+      "patterns": [
+        {
+          "id": "ps-objects",
+          "title": "Filter objects instead of parsing text",
+          "language": "powershell",
+          "code": "Get-Service |\n  Where-Object Status -eq \"Running\" |\n  Select-Object Name, DisplayName |\n  Sort-Object Name",
+          "why": "PowerShell pipelines carry .NET objects, preserving typed properties between commands.",
+          "remember": "Use properties with Where-Object/Select-Object; avoid parsing formatted console text.",
+          "tags": [
+            "pipeline",
+            "objects",
+            "filter"
+          ],
+          "concept": "pipeline-filter"
+        },
+        {
+          "id": "ps-errors",
+          "title": "Turn cmdlet failures into catchable errors",
+          "language": "powershell",
+          "code": "try {\n  Invoke-RestMethod $Uri -ErrorAction Stop\n}\ncatch {\n  Write-Error \"Request failed: $($_.Exception.Message)\"\n  throw\n}",
+          "why": "Some cmdlet errors are non-terminating by default; -ErrorAction Stop makes them participate in try/catch.",
+          "remember": "Use -ErrorAction Stop when failure must abort the current operation.",
+          "tags": [
+            "errors",
+            "try-catch",
+            "automation"
+          ],
+          "concept": "script-failure-boundary"
+        },
+        {
+          "id": "ps-port",
+          "title": "Inspect listeners as objects",
+          "language": "powershell",
+          "code": "Get-NetTCPConnection -State Listen |\n  Where-Object LocalPort -eq 8000 |\n  Select-Object LocalAddress, LocalPort, OwningProcess\n\nGet-Process -Id <OwningProcess>",
+          "why": "PowerShell can trace a listening endpoint to its owning process without parsing command-line text.",
+          "remember": "connection -> OwningProcess -> Get-Process mirrors the same diagnostic flow as Linux socket tools.",
+          "tags": [
+            "network",
+            "process",
+            "debugging"
+          ],
+          "concept": "process-inspection"
+        },
+        {
+          "id": "ps-files",
+          "title": "Stream file processing through the pipeline",
+          "language": "powershell",
+          "code": "Get-ChildItem . -Filter \"*.csv\" |\n  ForEach-Object {\n    Import-Csv $_.FullName\n  } |\n  Where-Object Status -eq \"Active\"",
+          "why": "Pipeline composition lets you enumerate, import and filter many files without manual index loops.",
+          "remember": "Let each pipeline stage do one operation on objects.",
+          "tags": [
+            "files",
+            "pipeline",
+            "csv"
+          ]
+        },
+        {
+          "id": "ps-json-config",
+          "title": "Read and write structured JSON instead of parsing text",
+          "language": "powershell",
+          "code": "$config = Get-Content ./config.json -Raw | ConvertFrom-Json\n$config.api.timeoutSeconds = 30\n$config | ConvertTo-Json -Depth 10 | Set-Content ./config.json",
+          "why": "ConvertFrom-Json turns JSON into objects, preserving structured property access through the automation pipeline.",
+          "remember": "Parse structured data once, then operate on properties rather than regexing JSON text.",
+          "tags": [
+            "json",
+            "configuration",
+            "objects"
+          ]
+        }
+      ],
+      "apis": [
+        {
+          "name": "Where-Object",
+          "signature": "Where-Object <condition>",
+          "whatFor": "Filter pipeline objects by properties.",
+          "example": "Where-Object Status -eq 'Running'"
+        },
+        {
+          "name": "Select-Object",
+          "signature": "Select-Object <properties>",
+          "whatFor": "Project object properties.",
+          "example": "Select-Object Name, Status"
+        },
+        {
+          "name": "Invoke-RestMethod",
+          "signature": "Invoke-RestMethod -Uri ...",
+          "whatFor": "Call an HTTP API and parse structured results.",
+          "example": "Invoke-RestMethod -Uri $url"
+        }
+      ],
+      "practices": [
+        {
+          "title": "Service inventory",
+          "prompt": "List stopped SQL-related services with only useful fields.",
+          "pattern": "Get-Service + Where-Object + Select-Object",
+          "reveal": "Filter by typed properties and project Name/Status."
+        },
+        {
+          "title": "API automation failure",
+          "prompt": "A REST call returns an error but the script continues.",
+          "pattern": "-ErrorAction Stop + try/catch",
+          "reveal": "Turn the cmdlet error into a terminating error and handle/rethrow it."
+        }
+      ],
+      "tracks": [
+        "devops"
+      ]
+    },
+    {
+      "id": "dax",
+      "name": "DAX",
+      "group": "BI",
+      "tagline": "Power BI measure patterns",
+      "basics": [
+        {
+          "label": "Recall 1",
+          "value": "CALCULATE"
+        },
+        {
+          "label": "Recall 2",
+          "value": "filter context"
+        },
+        {
+          "label": "Recall 3",
+          "value": "DIVIDE"
+        },
+        {
+          "label": "Recall 4",
+          "value": "REMOVEFILTERS"
+        }
+      ],
+      "patterns": [
+        {
+          "id": "dax-calculate",
+          "title": "Change filter context with CALCULATE",
+          "language": "dax",
+          "code": "Revenue LY =\nCALCULATE(\n    [Revenue],\n    DATEADD('Date'[Date], -1, YEAR)\n)",
+          "why": "CALCULATE evaluates an expression under modified filter context.",
+          "remember": "Ask two questions: what is the current filter context, and what does CALCULATE change?",
+          "tags": [
+            "calculate",
+            "filter-context",
+            "time-intelligence"
+          ]
+        },
+        {
+          "id": "dax-share",
+          "title": "Build a ratio with a controlled denominator",
+          "language": "dax",
+          "code": "Revenue Share =\nDIVIDE(\n    [Revenue],\n    CALCULATE(\n        [Revenue],\n        REMOVEFILTERS(Product[Category])\n    )\n)",
+          "why": "The denominator removes only the category filter while preserving other report filters.",
+          "remember": "Remove exactly the filter you want to ignore; keep the rest of the report context.",
+          "tags": [
+            "calculate",
+            "removefilters",
+            "ratio"
+          ]
+        },
+        {
+          "id": "dax-sumx",
+          "title": "Iterate when the expression is row-dependent",
+          "language": "dax",
+          "code": "Revenue =\nSUMX(\n    Sales,\n    Sales[Quantity] * Sales[UnitPrice]\n)",
+          "why": "SUMX evaluates an expression for each row, then aggregates the results.",
+          "remember": "Use an iterator when you must calculate per-row logic before aggregation.",
+          "tags": [
+            "sumx",
+            "iterator",
+            "measure"
+          ]
+        },
+        {
+          "id": "dax-divide",
+          "title": "Prefer DIVIDE for safe ratios",
+          "language": "dax",
+          "code": "Margin % =\nDIVIDE(\n    [Gross Margin],\n    [Revenue]\n)",
+          "why": "DIVIDE handles zero/blank denominators explicitly and reads like the business calculation.",
+          "remember": "For measures, DIVIDE is usually clearer and safer than the / operator.",
+          "tags": [
+            "divide",
+            "ratio",
+            "measure"
+          ]
+        }
+      ],
+      "apis": [
+        {
+          "name": "CALCULATE",
+          "signature": "CALCULATE(expression, filters...)",
+          "whatFor": "Evaluate a measure under modified filter context.",
+          "example": "CALCULATE([Revenue], Year[Year]=2026)"
+        },
+        {
+          "name": "DIVIDE",
+          "signature": "DIVIDE(numerator, denominator [, alternate])",
+          "whatFor": "Perform safe division.",
+          "example": "DIVIDE([Profit], [Revenue])"
+        },
+        {
+          "name": "REMOVEFILTERS",
+          "signature": "REMOVEFILTERS([table|column])",
+          "whatFor": "Clear selected filters inside a context transition.",
+          "example": "REMOVEFILTERS(Product[Category])"
+        }
+      ],
+      "practices": [
+        {
+          "title": "Percent of total",
+          "prompt": "Category share should ignore category but still respect Date and Region slicers.",
+          "pattern": "CALCULATE + REMOVEFILTERS",
+          "reveal": "Remove only Product[Category] in the denominator."
+        },
+        {
+          "title": "Row-dependent revenue",
+          "prompt": "Revenue is Quantity * UnitPrice and no stored revenue column exists.",
+          "pattern": "SUMX iterator",
+          "reveal": "Iterate Sales and sum Quantity * UnitPrice per row."
+        }
+      ],
+      "tracks": [
+        "data-analyst",
+        "bi-warehousing"
+      ]
+    },
+    {
+      "id": "excel",
+      "name": "Excel",
+      "group": "BI",
+      "tagline": "Modern spreadsheet patterns",
+      "basics": [
+        {
+          "label": "Recall 1",
+          "value": "XLOOKUP"
+        },
+        {
+          "label": "Recall 2",
+          "value": "FILTER"
+        },
+        {
+          "label": "Recall 3",
+          "value": "LET"
+        },
+        {
+          "label": "Recall 4",
+          "value": "SUMIFS"
+        }
+      ],
+      "patterns": [
+        {
+          "id": "excel-xlookup",
+          "title": "Lookup by a stable key",
+          "language": "excel",
+          "code": "=XLOOKUP(\n  A2,\n  Customers[CustomerID],\n  Customers[Segment],\n  \"Unknown\"\n)",
+          "why": "XLOOKUP separates lookup and return arrays and provides explicit not-found behavior.",
+          "remember": "Lookup on stable IDs, not display names.",
+          "tags": [
+            "xlookup",
+            "lookup",
+            "keyed-lookup"
+          ],
+          "concept": "keyed-lookup"
+        },
+        {
+          "id": "excel-let",
+          "title": "Name repeated formula expressions with LET",
+          "language": "excel",
+          "code": "=LET(\n  revenue, B2:B100*C2:C100,\n  valid, A2:A100<>\"\",\n  SUM(FILTER(revenue, valid))\n)",
+          "why": "LET improves readability and prevents repeated evaluation of the same expression.",
+          "remember": "Name meaningful intermediate calculations inside long formulas.",
+          "tags": [
+            "let",
+            "formula",
+            "readability"
+          ]
+        },
+        {
+          "id": "excel-filter",
+          "title": "Return matching rows as a dynamic array",
+          "language": "excel",
+          "code": "=FILTER(\n  Orders[[OrderID]:[Amount]],\n  Orders[Status]=\"Open\",\n  \"No open orders\"\n)",
+          "why": "FILTER returns a spilling result set without manual helper columns or copied formulas.",
+          "remember": "Think of FILTER as a small declarative WHERE clause over a range/table.",
+          "tags": [
+            "filter",
+            "dynamic-array",
+            "table"
+          ]
+        },
+        {
+          "id": "excel-sumifs",
+          "title": "Aggregate with explicit criteria",
+          "language": "excel",
+          "code": "=SUMIFS(\n  Orders[Amount],\n  Orders[CustomerID], A2,\n  Orders[Status], \"Paid\"\n)",
+          "why": "SUMIFS performs a grouped-style conditional aggregation for a known set of criteria.",
+          "remember": "Sum range first, then criteria-range / criteria pairs.",
+          "tags": [
+            "sumifs",
+            "aggregation",
+            "criteria"
+          ]
+        }
+      ],
+      "apis": [
+        {
+          "name": "XLOOKUP",
+          "signature": "XLOOKUP(lookup_value, lookup_array, return_array, [if_not_found])",
+          "whatFor": "Return a matching value by key.",
+          "example": "=XLOOKUP(A2,IDs,Names,\"Unknown\")"
+        },
+        {
+          "name": "FILTER",
+          "signature": "FILTER(array, include, [if_empty])",
+          "whatFor": "Return matching rows as a dynamic array.",
+          "example": "=FILTER(Table1,Table1[Status]=\"Open\")"
+        },
+        {
+          "name": "LET",
+          "signature": "LET(name1, value1, ..., calculation)",
+          "whatFor": "Name reusable intermediate formula expressions.",
+          "example": "=LET(x,A1*B1,x*1.2)"
+        }
+      ],
+      "practices": [
+        {
+          "title": "Customer segment lookup",
+          "prompt": "Return segment from CustomerID with a friendly missing fallback.",
+          "pattern": "XLOOKUP",
+          "reveal": "Use CustomerID as the lookup key and explicit if_not_found text."
+        },
+        {
+          "title": "Open orders report",
+          "prompt": "Return only open orders without helper columns.",
+          "pattern": "FILTER",
+          "reveal": "Use a Boolean include expression over the table's Status column."
+        }
+      ],
+      "tracks": [
+        "data-analyst",
+        "bi-warehousing"
+      ]
+    },
+    {
+      "id": "docker",
+      "name": "Docker",
+      "group": "Platform",
+      "tagline": "Containers and Compose",
+      "basics": [
+        {
+          "label": "Recall 1",
+          "value": "multi-stage builds"
+        },
+        {
+          "label": "Recall 2",
+          "value": "volumes"
+        },
+        {
+          "label": "Recall 3",
+          "value": "service DNS"
+        },
+        {
+          "label": "Recall 4",
+          "value": "logs"
+        }
+      ],
+      "patterns": [
+        {
+          "id": "docker-multistage",
+          "title": "Keep build tooling out of the runtime image",
+          "language": "dockerfile",
+          "code": "FROM node:22-alpine AS build\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci\nCOPY . .\nRUN npm run build\n\nFROM nginx:alpine\nCOPY --from=build /app/dist /usr/share/nginx/html",
+          "why": "Multi-stage builds isolate compilers/dependencies from the final runtime image.",
+          "remember": "Build in one stage, copy only runtime artifacts into the final stage.",
+          "tags": [
+            "multi-stage",
+            "image",
+            "build"
+          ]
+        },
+        {
+          "id": "docker-health",
+          "title": "Make service readiness explicit",
+          "language": "yaml",
+          "code": "services:\n  db:\n    image: postgres:17\n    healthcheck:\n      test: [\"CMD-SHELL\", \"pg_isready -U postgres\"]\n      interval: 5s\n      timeout: 3s\n      retries: 10\n  api:\n    build: .\n    depends_on:\n      db:\n        condition: service_healthy",
+          "why": "Container startup order is not the same as service readiness; health checks make dependencies observable.",
+          "remember": "Running does not mean ready. Make readiness a check, then depend on health rather than timing.",
+          "tags": [
+            "compose",
+            "healthcheck",
+            "readiness"
+          ],
+          "concept": "container-health"
+        },
+        {
+          "id": "docker-volume",
+          "title": "Persist mutable state outside the container layer",
+          "language": "yaml",
+          "code": "services:\n  db:\n    image: postgres:17\n    volumes:\n      - db_data:/var/lib/postgresql/data\n\nvolumes:\n  db_data:",
+          "why": "Named volumes survive container recreation and separate durable state from disposable container filesystems.",
+          "remember": "Containers are replaceable; durable application state belongs in a volume or external service.",
+          "tags": [
+            "volume",
+            "persistence",
+            "compose"
+          ]
+        },
+        {
+          "id": "docker-debug",
+          "title": "Inspect a running container before rebuilding",
+          "language": "bash",
+          "code": "docker ps\ndocker logs --tail 100 api\ndocker inspect api\ndocker exec -it api sh",
+          "why": "Logs, metadata and an interactive shell usually reveal runtime failures faster than blindly rebuilding.",
+          "remember": "Observe first: logs -> inspect -> exec -> rebuild only when the image really needs to change.",
+          "tags": [
+            "debugging",
+            "logs",
+            "inspect"
+          ]
+        },
+        {
+          "id": "docker-cache",
+          "title": "Order Dockerfile layers for reusable dependency cache",
+          "language": "dockerfile",
+          "code": "FROM python:3.13-slim\nWORKDIR /app\nCOPY requirements.txt .\nRUN pip install --no-cache-dir -r requirements.txt\nCOPY . .\nCMD [\"python\", \"app.py\"]",
+          "why": "Copying dependency manifests before frequently changing source lets unchanged dependency layers remain cached.",
+          "remember": "Stable expensive layers first; frequently changing source later.",
+          "tags": [
+            "build-cache",
+            "dockerfile",
+            "image"
+          ]
+        },
+        {
+          "id": "docker-context",
+          "title": "Keep secrets and noise out of the build context",
+          "language": "text",
+          "code": "# .dockerignore\n.git\n.env\nnode_modules\n__pycache__\ndist\n*.log",
+          "why": "A smaller build context improves build speed and reduces the chance that local secrets or artifacts are copied into image layers.",
+          "remember": "If the build does not need it, exclude it from the context.",
+          "tags": [
+            "dockerignore",
+            "security",
+            "build"
+          ]
+        }
+      ],
+      "apis": [
+        {
+          "name": "docker logs",
+          "signature": "docker logs [options] CONTAINER",
+          "whatFor": "Inspect container stdout/stderr.",
+          "example": "docker logs --tail 100 -f api"
+        },
+        {
+          "name": "docker exec",
+          "signature": "docker exec [options] CONTAINER COMMAND",
+          "whatFor": "Run a diagnostic command inside a running container.",
+          "example": "docker exec -it api sh"
+        },
+        {
+          "name": "docker compose",
+          "signature": "docker compose up|down|logs|ps",
+          "whatFor": "Operate a multi-container Compose application.",
+          "example": "docker compose up -d"
+        }
+      ],
+      "practices": [
+        {
+          "title": "API starts before database is ready",
+          "prompt": "Compose starts both services but the API fails its first connection.",
+          "pattern": "healthcheck + service_healthy",
+          "reveal": "Give the database a healthcheck and make the API depend on healthy readiness."
+        },
+        {
+          "title": "Image is unexpectedly huge",
+          "prompt": "The runtime image contains compilers and package caches.",
+          "pattern": "multi-stage build",
+          "reveal": "Build in one stage and copy only runtime artifacts into the final image."
+        }
+      ],
+      "tracks": [
+        "devops"
+      ]
+    },
+    {
+      "id": "git",
+      "name": "Git",
+      "group": "Platform",
+      "tagline": "Version-control patterns",
+      "basics": [
+        {
+          "label": "Recall 1",
+          "value": "status"
+        },
+        {
+          "label": "Recall 2",
+          "value": "diff"
+        },
+        {
+          "label": "Recall 3",
+          "value": "branch"
+        },
+        {
+          "label": "Recall 4",
+          "value": "rebase"
+        },
+        {
+          "label": "Recall 5",
+          "value": "reflog"
+        }
+      ],
+      "patterns": [
+        {
+          "id": "git-small-commit",
+          "title": "Build one reviewable commit",
+          "language": "bash",
+          "code": "git status\ngit diff\ngit add src/feature.ts tests/feature.test.ts\ngit diff --staged\ngit commit -m \"Add deterministic customer deduplication\"",
+          "why": "Inspecting before and after staging keeps unrelated changes out of a commit.",
+          "remember": "One commit should tell one coherent story that can be reviewed or reverted.",
+          "tags": [
+            "commit",
+            "diff",
+            "review"
+          ]
+        },
+        {
+          "id": "git-rebase",
+          "title": "Refresh a private feature branch",
+          "language": "bash",
+          "code": "git fetch origin\ngit rebase origin/main\n# resolve conflicts\ngit add <resolved-files>\ngit rebase --continue",
+          "why": "Rebasing a private branch replays your work on top of the latest base and can simplify review history.",
+          "remember": "Rebase private history; do not rewrite shared history without coordination.",
+          "tags": [
+            "rebase",
+            "branch",
+            "history"
+          ]
+        },
+        {
+          "id": "git-reflog",
+          "title": "Recover a lost local commit",
+          "language": "bash",
+          "code": "git reflog\ngit show <old-head>\ngit switch -c recovery <old-head>",
+          "why": "Reflog records recent movements of local references even when a commit is no longer reachable from the current branch.",
+          "remember": "If you lost a commit after reset/rebase, check reflog before assuming the work is gone.",
+          "tags": [
+            "reflog",
+            "recovery",
+            "history"
+          ]
+        },
+        {
+          "id": "git-stash",
+          "title": "Park an incomplete working tree safely",
+          "language": "bash",
+          "code": "git stash push -u -m \"wip: customer import\"\ngit switch hotfix\n# ... finish hotfix ...\ngit switch feature/customer-import\ngit stash pop",
+          "why": "A stash can temporarily clear tracked/untracked work when you must switch context without creating a misleading commit.",
+          "remember": "Use stash for short-lived interruption, not as a long-term archive.",
+          "tags": [
+            "stash",
+            "working-tree",
+            "context-switch"
+          ]
+        },
+        {
+          "id": "git-bisect",
+          "title": "Binary-search the commit that introduced a regression",
+          "language": "bash",
+          "code": "git bisect start\ngit bisect bad\ngit bisect good <known-good-commit>\n# test the checked-out revision\ngit bisect good   # or: git bisect bad\ngit bisect reset",
+          "why": "git bisect reduces a large regression range by repeatedly testing the midpoint.",
+          "remember": "Define one known-good and one known-bad boundary, then give Git a reliable pass/fail test.",
+          "tags": [
+            "bisect",
+            "debugging",
+            "history"
+          ]
+        },
+        {
+          "id": "git-safe-amend",
+          "title": "Amend the latest private commit without creating noise",
+          "language": "bash",
+          "code": "git status\ngit add <forgotten-file>\ngit diff --staged\ngit commit --amend --no-edit",
+          "why": "Amending keeps a small correction inside the commit it logically belongs to.",
+          "remember": "Amend local/private history; avoid rewriting commits other people may already depend on.",
+          "tags": [
+            "amend",
+            "commit",
+            "history"
+          ]
+        }
+      ],
+      "apis": [
+        {
+          "name": "git diff",
+          "signature": "git diff [--staged]",
+          "whatFor": "Inspect unstaged or staged changes.",
+          "example": "git diff --staged"
+        },
+        {
+          "name": "git restore",
+          "signature": "git restore [--staged] path",
+          "whatFor": "Restore worktree content or unstage paths.",
+          "example": "git restore --staged README.md"
+        },
+        {
+          "name": "git reflog",
+          "signature": "git reflog",
+          "whatFor": "Inspect local reference movements for recovery.",
+          "example": "git reflog"
+        }
+      ],
+      "practices": [
+        {
+          "title": "Accidental hard reset",
+          "prompt": "A local commit disappeared after reset.",
+          "pattern": "reflog + recovery branch",
+          "reveal": "Find the prior HEAD in reflog, inspect it, then create a recovery branch."
+        },
+        {
+          "title": "Hotfix interrupts unfinished work",
+          "prompt": "You need a clean working tree without committing half-done code.",
+          "pattern": "stash + context switch",
+          "reveal": "Stash tracked/untracked WIP with a message, fix the hotfix, then pop it back."
+        }
+      ],
+      "tracks": [
+        "devops"
+      ]
+    },
+    {
+      "id": "bash",
+      "name": "Bash",
+      "group": "Shell",
+      "tracks": [
+        "devops"
+      ],
+      "tagline": "Robust shell scripting and composable command-line automation.",
+      "basics": [
+        {
+          "label": "Strict mode",
+          "value": "set -euo pipefail"
+        },
+        {
+          "label": "Quote expansion",
+          "value": "\"${value}\""
+        },
+        {
+          "label": "Array expansion",
+          "value": "\"${items[@]}\""
+        },
+        {
+          "label": "Cleanup",
+          "value": "trap cleanup EXIT"
+        }
+      ],
+      "patterns": [
+        {
+          "id": "bash-strict",
+          "title": "Fail scripts on real errors",
+          "language": "bash",
+          "code": "#!/usr/bin/env bash\nset -euo pipefail\n\ninput=\"${1:?usage: script INPUT}\"\n[[ -f \"$input\" ]] || { echo \"missing: $input\" >&2; exit 1; }",
+          "why": "Strict settings expose unset variables and pipeline failures instead of silently continuing with partial work.",
+          "remember": "Strict mode + validated inputs + quoted expansions is the baseline for automation scripts.",
+          "tags": [
+            "strict-mode",
+            "errors",
+            "automation"
+          ],
+          "concept": "script-failure-boundary"
+        },
+        {
+          "id": "bash-getopts",
+          "title": "Parse CLI flags with getopts",
+          "language": "bash",
+          "code": "while getopts \":f:o:\" opt; do\n  case \"$opt\" in\n    f) input=\"$OPTARG\" ;;\n    o) output=\"$OPTARG\" ;;\n    *) echo \"usage: $0 -f INPUT -o OUTPUT\" >&2; exit 2 ;;\n  esac\ndone",
+          "why": "getopts keeps option parsing deterministic instead of relying on positional arguments and manual string slicing.",
+          "remember": "Parse flags first; validate required combinations after parsing.",
+          "tags": [
+            "getopts",
+            "cli",
+            "arguments"
+          ]
+        },
+        {
+          "id": "bash-safe-files",
+          "title": "Handle filenames without breaking on spaces",
+          "language": "bash",
+          "code": "find ./incoming -type f -name '*.csv' -print0 |\nwhile IFS= read -r -d '' file; do\n  printf 'processing %s\\n' \"$file\"\n  process_file \"$file\"\ndone",
+          "why": "NUL-delimited filenames avoid ambiguity from spaces, quotes and most special characters.",
+          "remember": "For arbitrary filenames, prefer -print0 + read -d '' (or xargs -0).",
+          "tags": [
+            "find",
+            "filenames",
+            "loop"
+          ]
+        },
+        {
+          "id": "bash-trap",
+          "title": "Guarantee cleanup with trap",
+          "language": "bash",
+          "code": "tmpdir=\"$(mktemp -d)\"\ncleanup() { rm -rf -- \"$tmpdir\"; }\ntrap cleanup EXIT INT TERM\n\nrun_export \"$tmpdir/result.csv\"",
+          "why": "A trap keeps cleanup attached to script lifetime even when a command fails or the script is interrupted.",
+          "remember": "Allocate resource -> register cleanup immediately -> do the work.",
+          "tags": [
+            "trap",
+            "cleanup",
+            "resource"
+          ]
+        },
+        {
+          "id": "bash-pipeline-filter",
+          "title": "Compose streaming text tools",
+          "language": "bash",
+          "code": "grep -h 'ERROR' logs/*.log |\n  awk '{print $3}' |\n  sort |\n  uniq -c |\n  sort -nr",
+          "why": "Small Unix filters can form an efficient streaming pipeline without a temporary file or large shell loop.",
+          "remember": "One stage, one transformation; let pipes move the stream.",
+          "tags": [
+            "pipeline",
+            "awk",
+            "grep",
+            "stream"
+          ],
+          "concept": "pipeline-filter"
+        }
+      ],
+      "apis": [
+        {
+          "name": "set",
+          "signature": "set -euo pipefail",
+          "whatFor": "Control Bash error/unset-variable/pipeline behavior.",
+          "example": "set -euo pipefail"
+        },
+        {
+          "name": "getopts",
+          "signature": "getopts optstring name [args]",
+          "whatFor": "Parse short command-line options.",
+          "example": "while getopts \"f:o:\" opt; do ...; done"
+        },
+        {
+          "name": "trap",
+          "signature": "trap ACTION SIGNAL...",
+          "whatFor": "Run cleanup or signal handlers when the shell exits or receives signals.",
+          "example": "trap cleanup EXIT INT TERM"
+        }
+      ],
+      "practices": [
+        {
+          "title": "Reliable import script",
+          "prompt": "A CSV loader must stop on failed commands, reject missing input and clean temporary files.",
+          "pattern": "strict mode + validation + trap",
+          "reveal": "Enable set -euo pipefail, validate the path, register cleanup immediately after creating temporary resources."
+        },
+        {
+          "title": "Batch files with spaces",
+          "prompt": "Process every CSV below a directory without breaking on filenames containing spaces.",
+          "pattern": "NUL-delimited find loop",
+          "reveal": "Use find -print0 and read -r -d '' so each filename remains one record."
+        }
+      ]
+    },
+    {
+      "id": "fabric",
+      "name": "Microsoft Fabric",
+      "group": "Cloud & Lakehouse",
+      "tracks": [
+        "data-engineering",
+        "bi-warehousing",
+        "cloud-lakehouse"
+      ],
+      "tagline": "Lakehouse, notebooks, pipelines and deployment patterns in Microsoft Fabric.",
+      "basics": [
+        {
+          "label": "Lakehouse",
+          "value": "Files + Delta Tables in OneLake"
+        },
+        {
+          "label": "Notebook",
+          "value": "Spark / Python / Pandas"
+        },
+        {
+          "label": "Pipeline boundary",
+          "value": "parameter cell -> Notebook activity"
+        },
+        {
+          "label": "Deployment",
+          "value": "Git/deployment moves definitions, not lakehouse data"
+        }
+      ],
+      "patterns": [
+        {
+          "id": "fabric-lakehouse-load",
+          "title": "Load files into a managed Delta table",
+          "language": "python",
+          "code": "raw = (spark.read\n    .option(\"header\", True)\n    .csv(\"Files/raw/orders/*.csv\"))\n\n(raw.write\n    .format(\"delta\")\n    .mode(\"overwrite\")\n    .saveAsTable(\"bronze_orders\"))",
+          "why": "Fabric notebooks can read relative Files paths from the default lakehouse and materialize managed Delta tables.",
+          "remember": "Use relative paths for the notebook's default lakehouse; write reusable curated data as Delta tables.",
+          "tags": [
+            "lakehouse",
+            "delta",
+            "notebook"
+          ]
+        },
+        {
+          "id": "fabric-cross-lakehouse",
+          "title": "Use an ABFS path for an explicit cross-lakehouse read",
+          "language": "python",
+          "code": "path = (\"abfss://<workspace>@onelake.dfs.fabric.microsoft.com/\"\n        \"<lakehouse>.Lakehouse/Files/raw/orders\")\ndf = spark.read.parquet(path)",
+          "why": "An explicit OneLake ABFS path makes the remote lakehouse boundary visible instead of relying on the notebook default.",
+          "remember": "Default lakehouse -> relative path; another lakehouse -> explicit OneLake ABFS path.",
+          "tags": [
+            "onelake",
+            "abfs",
+            "lakehouse"
+          ]
+        },
+        {
+          "id": "fabric-medallion",
+          "title": "Promote lakehouse data by quality layer",
+          "language": "python",
+          "code": "bronze = spark.table(\"bronze_orders\")\nsilver = bronze.filter(\"order_id is not null\").dropDuplicates([\"order_id\"])\nsilver.write.mode(\"overwrite\").format(\"delta\").saveAsTable(\"silver_orders\")\nspark.table(\"silver_orders\").groupBy(\"customer_id\").sum(\"amount\").write.mode(\"overwrite\").format(\"delta\").saveAsTable(\"gold_customer_revenue\")",
+          "why": "Bronze, Silver and Gold separate raw ingestion, validated detail and business-ready aggregates.",
+          "remember": "Layer names describe data quality and contract, not merely folders.",
+          "tags": [
+            "medallion",
+            "delta",
+            "lakehouse"
+          ],
+          "concept": "medallion-layers"
+        },
+        {
+          "id": "fabric-notebook-params",
+          "title": "Parameterize notebooks at the pipeline boundary",
+          "language": "python",
+          "code": "# Mark this cell as the notebook Parameters cell\nprocess_date = \"2026-09-21\"\ntarget_table = \"silver_orders\"\n\ndf = spark.table(\"bronze_orders\").where(f\"order_date = '{process_date}'\")\ndf.write.mode(\"overwrite\").saveAsTable(target_table)",
+          "why": "Fabric pipeline Notebook activities override values declared in the notebook parameter cell at execution time.",
+          "remember": "Keep defaults usable interactively; let the pipeline inject runtime values at the parameter cell.",
+          "tags": [
+            "pipeline",
+            "parameters",
+            "notebook"
+          ]
+        }
+      ],
+      "apis": [
+        {
+          "name": "Spark file read",
+          "signature": "spark.read.<format>(\"Files/...\")",
+          "whatFor": "Read files from the notebook default lakehouse.",
+          "example": "spark.read.parquet(\"Files/raw/orders\")"
+        },
+        {
+          "name": "saveAsTable",
+          "signature": "DataFrameWriter.saveAsTable(name)",
+          "whatFor": "Materialize a managed lakehouse table.",
+          "example": "df.write.format(\"delta\").saveAsTable(\"silver_orders\")"
+        },
+        {
+          "name": "OneLake ABFS",
+          "signature": "abfss://<workspace>@onelake.dfs.fabric.microsoft.com/<item>.Lakehouse/...",
+          "whatFor": "Reference a Fabric lakehouse explicitly across lakehouse/workspace boundaries.",
+          "example": "spark.read.parquet(abfs_path)"
+        }
+      ],
+      "practices": [
+        {
+          "title": "Reusable daily notebook",
+          "prompt": "A notebook should run interactively with defaults but accept a date and target table from a Fabric pipeline.",
+          "pattern": "Parameters cell + Notebook activity",
+          "reveal": "Declare simple defaults in the parameter cell and let the pipeline override them at run time."
+        },
+        {
+          "title": "Dev/Test lakehouse deployment",
+          "prompt": "Notebook definitions should move through Git/deployment, but production data must not be copied from development.",
+          "pattern": "deploy definitions, bind environment data separately",
+          "reveal": "Version notebook/lakehouse metadata and remap environment dependencies; treat OneLake data as environment-owned state."
+        }
+      ]
+    },
+    {
+      "id": "databricks",
+      "name": "Databricks",
+      "group": "Cloud & Lakehouse",
+      "tracks": [
+        "data-engineering",
+        "cloud-lakehouse"
+      ],
+      "tagline": "Unity Catalog, Auto Loader, medallion and declarative job deployment patterns.",
+      "basics": [
+        {
+          "label": "Governance",
+          "value": "catalog.schema.object"
+        },
+        {
+          "label": "Ingestion",
+          "value": "format(\"cloudFiles\")"
+        },
+        {
+          "label": "Layers",
+          "value": "Bronze -> Silver -> Gold"
+        },
+        {
+          "label": "Deployment",
+          "value": "databricks.yml + resources.jobs"
+        }
+      ],
+      "patterns": [
+        {
+          "id": "databricks-unity-catalog",
+          "title": "Use fully qualified Unity Catalog names",
+          "language": "sql",
+          "code": "select customer_id, sum(amount) as revenue\nfrom prod.silver.orders\ngroup by customer_id;",
+          "why": "Unity Catalog organizes governed objects in a catalog.schema.object namespace shared across attached workspaces.",
+          "remember": "Make environment/domain ownership explicit in catalog and schema names instead of relying on an implicit current database.",
+          "tags": [
+            "unity-catalog",
+            "governance",
+            "namespace"
+          ]
+        },
+        {
+          "id": "databricks-autoloader",
+          "title": "Incrementally ingest files with Auto Loader",
+          "language": "python",
+          "code": "raw = (spark.readStream\n    .format(\"cloudFiles\")\n    .option(\"cloudFiles.format\", \"json\")\n    .option(\"cloudFiles.useManagedFileEvents\", \"true\")\n    .load(\"/Volumes/prod/raw/events\"))",
+          "why": "Auto Loader incrementally discovers new files; Databricks recommends managed file events for scalable low-cost discovery when available.",
+          "remember": "Use a durable source path/checkpoint and choose schema-evolution behavior deliberately.",
+          "tags": [
+            "autoloader",
+            "cloudfiles",
+            "ingestion"
+          ]
+        },
+        {
+          "id": "databricks-medallion",
+          "title": "Promote data through governed medallion schemas",
+          "language": "python",
+          "code": "bronze = spark.table(\"prod.bronze.orders\")\nsilver = bronze.filter(\"order_id is not null\").dropDuplicates([\"order_id\"])\nsilver.write.mode(\"overwrite\").saveAsTable(\"prod.silver.orders\")\nspark.table(\"prod.silver.orders\").groupBy(\"customer_id\").sum(\"amount\").write.mode(\"overwrite\").saveAsTable(\"prod.gold.customer_revenue\")",
+          "why": "Medallion layers progressively improve quality from raw ingestion to validated detail and business-ready outputs.",
+          "remember": "Bronze preserves source fidelity; Silver validates; Gold serves business use cases.",
+          "tags": [
+            "medallion",
+            "lakehouse",
+            "unity-catalog"
+          ],
+          "concept": "medallion-layers"
+        },
+        {
+          "id": "databricks-bundle-job",
+          "title": "Declare a repeatable job in a bundle",
+          "language": "yaml",
+          "code": "bundle:\n  name: orders-etl\nresources:\n  jobs:\n    orders_etl:\n      name: orders-etl\n      tasks:\n        - task_key: transform\n          notebook_task:\n            notebook_path: ./src/transform.ipynb",
+          "why": "Declarative Automation Bundles keep job definitions with source code and provide explicit deployable targets.",
+          "remember": "Validate -> deploy -> run; keep environment differences in bundle targets rather than hand-editing production jobs.",
+          "tags": [
+            "bundle",
+            "jobs",
+            "deployment"
+          ]
+        }
+      ],
+      "apis": [
+        {
+          "name": "Unity Catalog identifier",
+          "signature": "catalog.schema.object",
+          "whatFor": "Address governed tables/views/models with an explicit three-level namespace.",
+          "example": "prod.silver.orders"
+        },
+        {
+          "name": "Auto Loader",
+          "signature": "spark.readStream.format(\"cloudFiles\")",
+          "whatFor": "Incrementally ingest new files from cloud object storage.",
+          "example": ".option(\"cloudFiles.format\",\"json\")"
+        },
+        {
+          "name": "Databricks bundle CLI",
+          "signature": "databricks bundle validate|deploy|run",
+          "whatFor": "Validate, deploy and run declaratively defined Databricks resources.",
+          "example": "databricks bundle deploy -t prod"
+        }
+      ],
+      "practices": [
+        {
+          "title": "Millions of arriving files",
+          "prompt": "Cloud object storage receives new JSON files continuously and full directory scans are becoming expensive.",
+          "pattern": "Auto Loader + managed file events",
+          "reveal": "Use cloudFiles with managed file events, deliberate schema evolution, and a durable per-stream checkpoint."
+        },
+        {
+          "title": "Same job in dev and prod",
+          "prompt": "A notebook job must be reproducibly deployed to different Databricks targets without manual UI edits.",
+          "pattern": "Declarative Automation Bundle",
+          "reveal": "Keep the job in databricks.yml/resources and put environment-specific workspace/compute settings in targets."
+        }
+      ]
+    }
+  ]
+}
