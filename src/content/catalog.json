@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "contentVersion": "0.3.0",
+  "contentVersion": "0.3.1",
   "reviewedAt": "2026-09-21",
   "technologies": [
     {
@@ -122,8 +122,7 @@
           "tags": [
             "merge",
             "quality"
-          ],
-          "concept": "join-cardinality"
+          ]
         },
         {
           "id": "pd-latest-row",
@@ -296,8 +295,7 @@
           "tags": [
             "join",
             "broadcast"
-          ],
-          "concept": "lookup-join"
+          ]
         }
       ],
       "apis": [
@@ -501,8 +499,7 @@
           "remember": "Incremental logic must remain correct on a full refresh.",
           "tags": [
             "incremental"
-          ],
-          "concept": "incremental-load"
+          ]
         }
       ],
       "apis": [
@@ -575,8 +572,7 @@
           "tags": [
             "join",
             "set"
-          ],
-          "concept": "anti-join"
+          ]
         }
       ],
       "apis": [
@@ -697,8 +693,7 @@
           "tags": [
             "merge",
             "cdc"
-          ],
-          "concept": "cdc-upsert"
+          ]
         }
       ],
       "apis": [
