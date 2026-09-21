@@ -53,3 +53,10 @@
   .reviewActions{justify-content:flex-start}
   .relatedStrip{grid-template-columns:1fr}
 }
+
+.knowledgeFocused{
+  outline:2px solid var(--accent);
+  outline-offset:2px;
+  box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 16%,transparent);
+  transition:outline-color .15s ease,box-shadow .15s ease;
+}
