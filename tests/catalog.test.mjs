@@ -124,7 +124,12 @@ test("cross-technology concepts are comparable", () => {
   const minimumFamilySizes = {
     "anti-join": 5,
     "grouped-aggregation": 5,
-    "upsert-by-key": 4
+    "upsert-by-key": 4,
+    "medallion-layers": 2,
+    "script-failure-boundary": 2,
+    "pipeline-filter": 2,
+    "container-health": 2,
+    "process-inspection": 2
   };
   for (const [concept, minimum] of Object.entries(minimumFamilySizes)) {
     const refs = byConcept.get(concept) || [];
