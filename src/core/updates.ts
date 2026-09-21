@@ -45,11 +45,12 @@ export function updateScopeKey(techId?:string){
 
 export function recordUpdateVisit(
   state:UpdateVisitState,
-  techId:string|undefined,
+  techId:string,
   now=new Date().toISOString()
 ):UpdateVisitState{
-  if(!validIsoTimestamp(now)) return state;
-  return {...state,[updateScopeKey(techId)]:now};
+  const scope=techId.trim();
+  if(!scope||!validIsoTimestamp(now)) return state;
+  return {...state,[scope]:now};
 }
 
 export function recordGlobalUpdateVisit(
