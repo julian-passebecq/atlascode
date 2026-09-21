@@ -1,3 +1,4 @@
+import type { TrackId } from "./tracks";
 import rawCatalog from "./catalog.json";
 
 export type Mode = "memo" | "patterns" | "apis" | "examples" | "practice" | "updates";
@@ -15,6 +16,7 @@ export type Technology = {
   id:string;
   name:string;
   group:string;
+  tracks:TrackId[];
   tagline:string;
   basics:{label:string;value:string}[];
   patterns:Pattern[];
