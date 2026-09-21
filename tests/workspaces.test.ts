@@ -4,6 +4,7 @@ import {
   loadWorkspaces,
   parseWorkspaces,
   saveWorkspaces,
+  visiblePaneKey,
   workspaceTitle
 } from "../src/core/workspaces";
 
@@ -94,5 +95,18 @@ describe("workspaceTitle", () => {
     expect(workspaceTitle(workspace)).toBe("Pandas");
     expect(workspaceTitle({...workspace,split:true,right:{techId:"polars",mode:"patterns"}}))
       .toBe("Pandas + Polars");
+  });
+});
+
+
+describe("visiblePaneKey", () => {
+  it("never targets the hidden right pane when split view is off", () => {
+    expect(visiblePaneKey(false,"right")).toBe("left");
+    expect(visiblePaneKey(false,"left")).toBe("left");
+  });
+
+  it("preserves the selected pane while split view is visible", () => {
+    expect(visiblePaneKey(true,"right")).toBe("right");
+    expect(visiblePaneKey(true,"left")).toBe("left");
   });
 });
