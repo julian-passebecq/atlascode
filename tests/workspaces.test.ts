@@ -4,6 +4,7 @@ import {
   loadWorkspaces,
   parseWorkspaces,
   saveWorkspaces,
+  scopeWorkspaceToTechnologies,
   visiblePaneKey,
   workspaceTitle
 } from "../src/core/workspaces";
@@ -108,5 +109,67 @@ describe("visiblePaneKey", () => {
   it("preserves the selected pane while split view is visible", () => {
     expect(visiblePaneKey(true,"right")).toBe("right");
     expect(visiblePaneKey(true,"left")).toBe("left");
+  });
+});
+
+
+describe("scopeWorkspaceToTechnologies", () => {
+  it("keeps panes already inside the selected track", () => {
+    const workspace=createWorkspace("w1","python");
+    const scoped=scopeWorkspaceToTechnologies(
+      {...workspace,split:true,right:{techId:"pandas",mode:"patterns"}},
+      new Set(["python","pandas","sql"]),
+      "python"
+    );
+
+    expect(scoped.left.techId).toBe("python");
+    expect(scoped.right.techId).toBe("pandas");
+    expect(scoped.title).toBe("Python + Pandas");
+  });
+
+  it("moves out-of-track panes to valid defaults and clears transient focus", () => {
+    const workspace=createWorkspace("w1","pandas");
+    workspace.split=true;
+    workspace.left={
+      techId:"pandas",
+      mode:"patterns",
+      focusId:"pd-latest-row",
+      focusKind:"pattern",
+      focusSeq:4
+    };
+    workspace.right={
+      techId:"sql",
+      mode:"apis",
+      focusId:"sql:ROW_NUMBER",
+      focusKind:"api",
+      focusSeq:5
+    };
+
+    const scoped=scopeWorkspaceToTechnologies(
+      workspace,
+      new Set(["kubernetes","docker","git"]),
+      "kubernetes"
+    );
+
+    expect(scoped.left).toEqual({techId:"kubernetes",mode:"patterns"});
+    expect(scoped.right).toEqual({techId:"docker",mode:"apis"});
+    expect(scoped.title).toBe("Kubernetes + Docker");
+  });
+
+  it("uses the first valid allowed technology if the configured default is invalid", () => {
+    const workspace=createWorkspace("w1","python");
+    const scoped=scopeWorkspaceToTechnologies(
+      workspace,
+      new Set(["fabric","databricks"]),
+      "missing-tech"
+    );
+
+    expect(scoped.left.techId).toBe("fabric");
+  });
+
+  it("returns the original workspace when no valid track technologies exist", () => {
+    const workspace=createWorkspace("w1","python");
+    expect(scopeWorkspaceToTechnologies(workspace,new Set(),"python")).toBe(workspace);
+    expect(scopeWorkspaceToTechnologies(workspace,new Set(["missing-tech"]),"missing-tech")).toBe(workspace);
   });
 });
