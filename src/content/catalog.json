@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "contentVersion": "0.9.1",
+  "contentVersion": "1.0.0",
   "reviewedAt": "2026-09-21",
   "technologies": [
     {
@@ -125,6 +125,10 @@
           "pattern": "generator",
           "reveal": "Yield or iterate records incrementally instead of returning one giant list."
         }
+      ],
+      "tracks": [
+        "data-analyst",
+        "data-engineering"
       ]
     },
     {
@@ -251,6 +255,9 @@
           "pattern": "merge(validate='m:1')",
           "reveal": "Declare expected cardinality and inspect unmatched rows."
         }
+      ],
+      "tracks": [
+        "data-analyst"
       ]
     },
     {
@@ -376,6 +383,10 @@
           "pattern": "scan_parquet + lazy expressions",
           "reveal": "Use a LazyFrame, filter/select early, collect at the boundary."
         }
+      ],
+      "tracks": [
+        "data-analyst",
+        "data-engineering"
       ]
     },
     {
@@ -500,6 +511,10 @@
           "pattern": "cache + unpersist",
           "reveal": "Cache the reused intermediate, trigger reuse, then unpersist."
         }
+      ],
+      "tracks": [
+        "data-engineering",
+        "cloud-lakehouse"
       ]
     },
     {
@@ -613,6 +628,10 @@
           "pattern": "left_anti join",
           "reveal": "Use a left anti join rather than joining and filtering null right columns."
         }
+      ],
+      "tracks": [
+        "data-engineering",
+        "cloud-lakehouse"
       ]
     },
     {
@@ -725,6 +744,9 @@
           "pattern": "dynamic task mapping",
           "reveal": "Return the dates, then expand the processing task over them."
         }
+      ],
+      "tracks": [
+        "data-engineering"
       ]
     },
     {
@@ -847,6 +869,10 @@
           "pattern": "macro",
           "reveal": "Extract the mechanical SQL expression into a small reusable macro."
         }
+      ],
+      "tracks": [
+        "data-engineering",
+        "bi-warehousing"
       ]
     },
     {
@@ -973,6 +999,11 @@
           "pattern": "conditional aggregation",
           "reveal": "Group once and use CASE inside SUM for each measure."
         }
+      ],
+      "tracks": [
+        "data-analyst",
+        "data-engineering",
+        "bi-warehousing"
       ]
     },
     {
@@ -1100,6 +1131,10 @@
           "pattern": "COPY query to Parquet",
           "reveal": "Materialize the cleaned query result as compressed Parquet."
         }
+      ],
+      "tracks": [
+        "data-analyst",
+        "data-engineering"
       ]
     },
     {
@@ -1213,6 +1248,10 @@
           "pattern": "predicate overwrite",
           "reveal": "Replace exactly the logical date partition instead of appending."
         }
+      ],
+      "tracks": [
+        "data-engineering",
+        "cloud-lakehouse"
       ]
     },
     {
@@ -1340,6 +1379,10 @@
           "pattern": "ROW_NUMBER + QUALIFY",
           "reveal": "Use ROW_NUMBER over customer_id ordered by updated_at descending and QUALIFY = 1."
         }
+      ],
+      "tracks": [
+        "bi-warehousing",
+        "cloud-lakehouse"
       ]
     },
     {
@@ -1467,6 +1510,10 @@
           "pattern": "TRY conversion + quality check",
           "reveal": "Use TRY_TO_NUMBER, then measure rows where the result is NULL."
         }
+      ],
+      "tracks": [
+        "bi-warehousing",
+        "cloud-lakehouse"
       ]
     },
     {
@@ -1593,6 +1640,10 @@
           "pattern": "Temp table + index",
           "reveal": "Materialize into #temp and index the join key if repeated use justifies it."
         }
+      ],
+      "tracks": [
+        "data-analyst",
+        "bi-warehousing"
       ]
     },
     {
@@ -1720,6 +1771,10 @@
           "pattern": "EXPLAIN ANALYZE + BUFFERS",
           "reveal": "Inspect the real scan/aggregate plan before proposing an index."
         }
+      ],
+      "tracks": [
+        "data-analyst",
+        "bi-warehousing"
       ]
     },
     {
@@ -1834,6 +1889,10 @@
           "pattern": "JSON extraction + validation",
           "reveal": "Extract the path, cast/validate it, and profile malformed rows."
         }
+      ],
+      "tracks": [
+        "data-analyst",
+        "bi-warehousing"
       ]
     },
     {
@@ -1946,6 +2005,10 @@
           "pattern": "BackgroundTasks",
           "reveal": "Schedule the small same-process task after committing the request work."
         }
+      ],
+      "tracks": [
+        "data-engineering",
+        "devops"
       ]
     },
     {
@@ -2024,6 +2087,32 @@
             "rollout",
             "desired-state"
           ]
+        },
+        {
+          "id": "k8s-rollout-debug",
+          "title": "Observe a Deployment rollout before undoing it",
+          "language": "bash",
+          "code": "kubectl rollout status deployment/api\nkubectl rollout history deployment/api\nkubectl get pods -l app=api\nkubectl describe pod <failing-pod>\nkubectl rollout undo deployment/api",
+          "why": "Rollout status/history plus pod events separates an image/config failure from a controller problem before rollback.",
+          "remember": "Status -> failing pods/events -> history -> undo only when the new revision is the cause.",
+          "tags": [
+            "rollout",
+            "deployment",
+            "debugging"
+          ]
+        },
+        {
+          "id": "k8s-service-debug",
+          "title": "Trace Service routing to ready endpoints",
+          "language": "bash",
+          "code": "kubectl get service api\nkubectl get endpointslices -l kubernetes.io/service-name=api\nkubectl get pods -l app=api -o wide\nkubectl logs deployment/api --tail=100",
+          "why": "A Service can exist while selecting no ready endpoints, so routing diagnosis should inspect selectors, endpoint slices and pod readiness together.",
+          "remember": "Service -> selector -> EndpointSlice -> ready pod -> application logs.",
+          "tags": [
+            "service",
+            "network",
+            "debugging"
+          ]
         }
       ],
       "apis": [
@@ -2059,6 +2148,9 @@
           "pattern": "requests + scheduler diagnosis",
           "reveal": "Inspect pod events and compare requests with available node capacity."
         }
+      ],
+      "tracks": [
+        "devops"
       ]
     },
     {
@@ -2117,32 +2209,43 @@
           "concept": "process-inspection"
         },
         {
-          "id": "linux-safe-script",
-          "title": "Fail shell scripts visibly",
+          "id": "linux-permissions",
+          "title": "Diagnose file ownership and permissions",
           "language": "bash",
-          "code": "#!/usr/bin/env bash\nset -euo pipefail\n\ninput=\"${1:?usage: script INPUT}\"\n[[ -f \"$input\" ]] || { echo \"missing: $input\" >&2; exit 1; }",
-          "why": "Strict shell settings catch unset variables and pipeline failures that would otherwise continue silently.",
-          "remember": "Quote variables, validate inputs, and make failure explicit.",
+          "code": "ls -ld /srv/app /srv/app/config.yaml\nnamei -l /srv/app/config.yaml\nstat /srv/app/config.yaml\nid apiuser",
+          "why": "Permission failures depend on ownership and execute/read bits across the entire path, not only the final file.",
+          "remember": "Check identity, ownership and every directory in the path before reaching for chmod 777.",
           "tags": [
-            "bash",
-            "script",
-            "errors"
+            "permissions",
+            "ownership",
+            "filesystem"
           ]
         },
         {
-          "id": "linux-pipeline-filter",
-          "title": "Compose small tools through a pipeline",
+          "id": "linux-disk",
+          "title": "Find what is consuming disk space",
           "language": "bash",
-          "code": "find logs -type f -name \"*.log\" -mtime -1 -print0 |\n  xargs -0 grep -h \"ERROR\" |\n  sort |\n  uniq -c |\n  sort -nr",
-          "why": "Unix tools are most useful when each stage performs one operation and streams its output to the next.",
-          "remember": "Compose find/filter/aggregate stages instead of writing one large shell loop.",
+          "code": "df -h\ndu -xhd1 /var | sort -h\nfind /var/log -type f -size +500M -ls",
+          "why": "df shows filesystem pressure; du and find narrow the usage to directories and large files.",
+          "remember": "Filesystem full -> df; where did it go -> du/find.",
           "tags": [
-            "pipeline",
-            "grep",
-            "find",
-            "stream"
-          ],
-          "concept": "pipeline-filter"
+            "disk",
+            "filesystem",
+            "debugging"
+          ]
+        },
+        {
+          "id": "linux-signals",
+          "title": "Stop a process gracefully before forcing it",
+          "language": "bash",
+          "code": "ps -fp <pid>\nkill -TERM <pid>\nsleep 5\nps -p <pid>\nkill -KILL <pid>  # only if graceful shutdown failed",
+          "why": "SIGTERM gives the application a chance to flush state and release resources; SIGKILL does not.",
+          "remember": "Inspect -> TERM -> verify -> KILL only as a last resort.",
+          "tags": [
+            "process",
+            "signals",
+            "operations"
+          ]
         }
       ],
       "apis": [
@@ -2178,6 +2281,9 @@
           "pattern": "systemctl + journalctl",
           "reveal": "Check service state, then inspect the recent unit journal for the root error."
         }
+      ],
+      "tracks": [
+        "devops"
       ]
     },
     {
@@ -2229,7 +2335,8 @@
             "errors",
             "try-catch",
             "automation"
-          ]
+          ],
+          "concept": "script-failure-boundary"
         },
         {
           "id": "ps-port",
@@ -2256,6 +2363,19 @@
             "files",
             "pipeline",
             "csv"
+          ]
+        },
+        {
+          "id": "ps-json-config",
+          "title": "Read and write structured JSON instead of parsing text",
+          "language": "powershell",
+          "code": "$config = Get-Content ./config.json -Raw | ConvertFrom-Json\n$config.api.timeoutSeconds = 30\n$config | ConvertTo-Json -Depth 10 | Set-Content ./config.json",
+          "why": "ConvertFrom-Json turns JSON into objects, preserving structured property access through the automation pipeline.",
+          "remember": "Parse structured data once, then operate on properties rather than regexing JSON text.",
+          "tags": [
+            "json",
+            "configuration",
+            "objects"
           ]
         }
       ],
@@ -2292,6 +2412,9 @@
           "pattern": "-ErrorAction Stop + try/catch",
           "reveal": "Turn the cmdlet error into a terminating error and handle/rethrow it."
         }
+      ],
+      "tracks": [
+        "devops"
       ]
     },
     {
@@ -2404,6 +2527,10 @@
           "pattern": "SUMX iterator",
           "reveal": "Iterate Sales and sum Quantity * UnitPrice per row."
         }
+      ],
+      "tracks": [
+        "data-analyst",
+        "bi-warehousing"
       ]
     },
     {
@@ -2517,6 +2644,10 @@
           "pattern": "FILTER",
           "reveal": "Use a Boolean include expression over the table's Status column."
         }
+      ],
+      "tracks": [
+        "data-analyst",
+        "bi-warehousing"
       ]
     },
     {
@@ -2595,6 +2726,32 @@
             "logs",
             "inspect"
           ]
+        },
+        {
+          "id": "docker-cache",
+          "title": "Order Dockerfile layers for reusable dependency cache",
+          "language": "dockerfile",
+          "code": "FROM python:3.13-slim\nWORKDIR /app\nCOPY requirements.txt .\nRUN pip install --no-cache-dir -r requirements.txt\nCOPY . .\nCMD [\"python\", \"app.py\"]",
+          "why": "Copying dependency manifests before frequently changing source lets unchanged dependency layers remain cached.",
+          "remember": "Stable expensive layers first; frequently changing source later.",
+          "tags": [
+            "build-cache",
+            "dockerfile",
+            "image"
+          ]
+        },
+        {
+          "id": "docker-context",
+          "title": "Keep secrets and noise out of the build context",
+          "language": "text",
+          "code": "# .dockerignore\n.git\n.env\nnode_modules\n__pycache__\ndist\n*.log",
+          "why": "A smaller build context improves build speed and reduces the chance that local secrets or artifacts are copied into image layers.",
+          "remember": "If the build does not need it, exclude it from the context.",
+          "tags": [
+            "dockerignore",
+            "security",
+            "build"
+          ]
         }
       ],
       "apis": [
@@ -2630,6 +2787,9 @@
           "pattern": "multi-stage build",
           "reveal": "Build in one stage and copy only runtime artifacts into the final image."
         }
+      ],
+      "tracks": [
+        "devops"
       ]
     },
     {
@@ -2711,6 +2871,32 @@
             "working-tree",
             "context-switch"
           ]
+        },
+        {
+          "id": "git-bisect",
+          "title": "Binary-search the commit that introduced a regression",
+          "language": "bash",
+          "code": "git bisect start\ngit bisect bad\ngit bisect good <known-good-commit>\n# test the checked-out revision\ngit bisect good   # or: git bisect bad\ngit bisect reset",
+          "why": "git bisect reduces a large regression range by repeatedly testing the midpoint.",
+          "remember": "Define one known-good and one known-bad boundary, then give Git a reliable pass/fail test.",
+          "tags": [
+            "bisect",
+            "debugging",
+            "history"
+          ]
+        },
+        {
+          "id": "git-safe-amend",
+          "title": "Amend the latest private commit without creating noise",
+          "language": "bash",
+          "code": "git status\ngit add <forgotten-file>\ngit diff --staged\ngit commit --amend --no-edit",
+          "why": "Amending keeps a small correction inside the commit it logically belongs to.",
+          "remember": "Amend local/private history; avoid rewriting commits other people may already depend on.",
+          "tags": [
+            "amend",
+            "commit",
+            "history"
+          ]
         }
       ],
       "apis": [
@@ -2745,6 +2931,375 @@
           "prompt": "You need a clean working tree without committing half-done code.",
           "pattern": "stash + context switch",
           "reveal": "Stash tracked/untracked WIP with a message, fix the hotfix, then pop it back."
+        }
+      ],
+      "tracks": [
+        "devops"
+      ]
+    },
+    {
+      "id": "bash",
+      "name": "Bash",
+      "group": "Shell",
+      "tracks": [
+        "devops"
+      ],
+      "tagline": "Robust shell scripting and composable command-line automation.",
+      "basics": [
+        {
+          "label": "Strict mode",
+          "value": "set -euo pipefail"
+        },
+        {
+          "label": "Quote expansion",
+          "value": "\"${value}\""
+        },
+        {
+          "label": "Array expansion",
+          "value": "\"${items[@]}\""
+        },
+        {
+          "label": "Cleanup",
+          "value": "trap cleanup EXIT"
+        }
+      ],
+      "patterns": [
+        {
+          "id": "bash-strict",
+          "title": "Fail scripts on real errors",
+          "language": "bash",
+          "code": "#!/usr/bin/env bash\nset -euo pipefail\n\ninput=\"${1:?usage: script INPUT}\"\n[[ -f \"$input\" ]] || { echo \"missing: $input\" >&2; exit 1; }",
+          "why": "Strict settings expose unset variables and pipeline failures instead of silently continuing with partial work.",
+          "remember": "Strict mode + validated inputs + quoted expansions is the baseline for automation scripts.",
+          "tags": [
+            "strict-mode",
+            "errors",
+            "automation"
+          ],
+          "concept": "script-failure-boundary"
+        },
+        {
+          "id": "bash-getopts",
+          "title": "Parse CLI flags with getopts",
+          "language": "bash",
+          "code": "while getopts \":f:o:\" opt; do\n  case \"$opt\" in\n    f) input=\"$OPTARG\" ;;\n    o) output=\"$OPTARG\" ;;\n    *) echo \"usage: $0 -f INPUT -o OUTPUT\" >&2; exit 2 ;;\n  esac\ndone",
+          "why": "getopts keeps option parsing deterministic instead of relying on positional arguments and manual string slicing.",
+          "remember": "Parse flags first; validate required combinations after parsing.",
+          "tags": [
+            "getopts",
+            "cli",
+            "arguments"
+          ]
+        },
+        {
+          "id": "bash-safe-files",
+          "title": "Handle filenames without breaking on spaces",
+          "language": "bash",
+          "code": "find ./incoming -type f -name '*.csv' -print0 |\nwhile IFS= read -r -d '' file; do\n  printf 'processing %s\\n' \"$file\"\n  process_file \"$file\"\ndone",
+          "why": "NUL-delimited filenames avoid ambiguity from spaces, quotes and most special characters.",
+          "remember": "For arbitrary filenames, prefer -print0 + read -d '' (or xargs -0).",
+          "tags": [
+            "find",
+            "filenames",
+            "loop"
+          ]
+        },
+        {
+          "id": "bash-trap",
+          "title": "Guarantee cleanup with trap",
+          "language": "bash",
+          "code": "tmpdir=\"$(mktemp -d)\"\ncleanup() { rm -rf -- \"$tmpdir\"; }\ntrap cleanup EXIT INT TERM\n\nrun_export \"$tmpdir/result.csv\"",
+          "why": "A trap keeps cleanup attached to script lifetime even when a command fails or the script is interrupted.",
+          "remember": "Allocate resource -> register cleanup immediately -> do the work.",
+          "tags": [
+            "trap",
+            "cleanup",
+            "resource"
+          ]
+        },
+        {
+          "id": "bash-pipeline-filter",
+          "title": "Compose streaming text tools",
+          "language": "bash",
+          "code": "grep -h 'ERROR' logs/*.log |\n  awk '{print $3}' |\n  sort |\n  uniq -c |\n  sort -nr",
+          "why": "Small Unix filters can form an efficient streaming pipeline without a temporary file or large shell loop.",
+          "remember": "One stage, one transformation; let pipes move the stream.",
+          "tags": [
+            "pipeline",
+            "awk",
+            "grep",
+            "stream"
+          ],
+          "concept": "pipeline-filter"
+        }
+      ],
+      "apis": [
+        {
+          "name": "set",
+          "signature": "set -euo pipefail",
+          "whatFor": "Control Bash error/unset-variable/pipeline behavior.",
+          "example": "set -euo pipefail"
+        },
+        {
+          "name": "getopts",
+          "signature": "getopts optstring name [args]",
+          "whatFor": "Parse short command-line options.",
+          "example": "while getopts \"f:o:\" opt; do ...; done"
+        },
+        {
+          "name": "trap",
+          "signature": "trap ACTION SIGNAL...",
+          "whatFor": "Run cleanup or signal handlers when the shell exits or receives signals.",
+          "example": "trap cleanup EXIT INT TERM"
+        }
+      ],
+      "practices": [
+        {
+          "title": "Reliable import script",
+          "prompt": "A CSV loader must stop on failed commands, reject missing input and clean temporary files.",
+          "pattern": "strict mode + validation + trap",
+          "reveal": "Enable set -euo pipefail, validate the path, register cleanup immediately after creating temporary resources."
+        },
+        {
+          "title": "Batch files with spaces",
+          "prompt": "Process every CSV below a directory without breaking on filenames containing spaces.",
+          "pattern": "NUL-delimited find loop",
+          "reveal": "Use find -print0 and read -r -d '' so each filename remains one record."
+        }
+      ]
+    },
+    {
+      "id": "fabric",
+      "name": "Microsoft Fabric",
+      "group": "Cloud & Lakehouse",
+      "tracks": [
+        "data-engineering",
+        "bi-warehousing",
+        "cloud-lakehouse"
+      ],
+      "tagline": "Lakehouse, notebooks, pipelines and deployment patterns in Microsoft Fabric.",
+      "basics": [
+        {
+          "label": "Lakehouse",
+          "value": "Files + Delta Tables in OneLake"
+        },
+        {
+          "label": "Notebook",
+          "value": "Spark / Python / Pandas"
+        },
+        {
+          "label": "Pipeline boundary",
+          "value": "parameter cell -> Notebook activity"
+        },
+        {
+          "label": "Deployment",
+          "value": "Git/deployment moves definitions, not lakehouse data"
+        }
+      ],
+      "patterns": [
+        {
+          "id": "fabric-lakehouse-load",
+          "title": "Load files into a managed Delta table",
+          "language": "python",
+          "code": "raw = (spark.read\n    .option(\"header\", True)\n    .csv(\"Files/raw/orders/*.csv\"))\n\n(raw.write\n    .format(\"delta\")\n    .mode(\"overwrite\")\n    .saveAsTable(\"bronze_orders\"))",
+          "why": "Fabric notebooks can read relative Files paths from the default lakehouse and materialize managed Delta tables.",
+          "remember": "Use relative paths for the notebook's default lakehouse; write reusable curated data as Delta tables.",
+          "tags": [
+            "lakehouse",
+            "delta",
+            "notebook"
+          ]
+        },
+        {
+          "id": "fabric-cross-lakehouse",
+          "title": "Use an ABFS path for an explicit cross-lakehouse read",
+          "language": "python",
+          "code": "path = (\"abfss://<workspace>@onelake.dfs.fabric.microsoft.com/\"\n        \"<lakehouse>.Lakehouse/Files/raw/orders\")\ndf = spark.read.parquet(path)",
+          "why": "An explicit OneLake ABFS path makes the remote lakehouse boundary visible instead of relying on the notebook default.",
+          "remember": "Default lakehouse -> relative path; another lakehouse -> explicit OneLake ABFS path.",
+          "tags": [
+            "onelake",
+            "abfs",
+            "lakehouse"
+          ]
+        },
+        {
+          "id": "fabric-medallion",
+          "title": "Promote lakehouse data by quality layer",
+          "language": "python",
+          "code": "bronze = spark.table(\"bronze_orders\")\nsilver = bronze.filter(\"order_id is not null\").dropDuplicates([\"order_id\"])\nsilver.write.mode(\"overwrite\").format(\"delta\").saveAsTable(\"silver_orders\")\nspark.table(\"silver_orders\").groupBy(\"customer_id\").sum(\"amount\").write.mode(\"overwrite\").format(\"delta\").saveAsTable(\"gold_customer_revenue\")",
+          "why": "Bronze, Silver and Gold separate raw ingestion, validated detail and business-ready aggregates.",
+          "remember": "Layer names describe data quality and contract, not merely folders.",
+          "tags": [
+            "medallion",
+            "delta",
+            "lakehouse"
+          ],
+          "concept": "medallion-layers"
+        },
+        {
+          "id": "fabric-notebook-params",
+          "title": "Parameterize notebooks at the pipeline boundary",
+          "language": "python",
+          "code": "# Mark this cell as the notebook Parameters cell\nprocess_date = \"2026-09-21\"\ntarget_table = \"silver_orders\"\n\ndf = spark.table(\"bronze_orders\").where(f\"order_date = '{process_date}'\")\ndf.write.mode(\"overwrite\").saveAsTable(target_table)",
+          "why": "Fabric pipeline Notebook activities override values declared in the notebook parameter cell at execution time.",
+          "remember": "Keep defaults usable interactively; let the pipeline inject runtime values at the parameter cell.",
+          "tags": [
+            "pipeline",
+            "parameters",
+            "notebook"
+          ]
+        }
+      ],
+      "apis": [
+        {
+          "name": "Spark file read",
+          "signature": "spark.read.<format>(\"Files/...\")",
+          "whatFor": "Read files from the notebook default lakehouse.",
+          "example": "spark.read.parquet(\"Files/raw/orders\")"
+        },
+        {
+          "name": "saveAsTable",
+          "signature": "DataFrameWriter.saveAsTable(name)",
+          "whatFor": "Materialize a managed lakehouse table.",
+          "example": "df.write.format(\"delta\").saveAsTable(\"silver_orders\")"
+        },
+        {
+          "name": "OneLake ABFS",
+          "signature": "abfss://<workspace>@onelake.dfs.fabric.microsoft.com/<item>.Lakehouse/...",
+          "whatFor": "Reference a Fabric lakehouse explicitly across lakehouse/workspace boundaries.",
+          "example": "spark.read.parquet(abfs_path)"
+        }
+      ],
+      "practices": [
+        {
+          "title": "Reusable daily notebook",
+          "prompt": "A notebook should run interactively with defaults but accept a date and target table from a Fabric pipeline.",
+          "pattern": "Parameters cell + Notebook activity",
+          "reveal": "Declare simple defaults in the parameter cell and let the pipeline override them at run time."
+        },
+        {
+          "title": "Dev/Test lakehouse deployment",
+          "prompt": "Notebook definitions should move through Git/deployment, but production data must not be copied from development.",
+          "pattern": "deploy definitions, bind environment data separately",
+          "reveal": "Version notebook/lakehouse metadata and remap environment dependencies; treat OneLake data as environment-owned state."
+        }
+      ]
+    },
+    {
+      "id": "databricks",
+      "name": "Databricks",
+      "group": "Cloud & Lakehouse",
+      "tracks": [
+        "data-engineering",
+        "cloud-lakehouse"
+      ],
+      "tagline": "Unity Catalog, Auto Loader, medallion and declarative job deployment patterns.",
+      "basics": [
+        {
+          "label": "Governance",
+          "value": "catalog.schema.object"
+        },
+        {
+          "label": "Ingestion",
+          "value": "format(\"cloudFiles\")"
+        },
+        {
+          "label": "Layers",
+          "value": "Bronze -> Silver -> Gold"
+        },
+        {
+          "label": "Deployment",
+          "value": "databricks.yml + resources.jobs"
+        }
+      ],
+      "patterns": [
+        {
+          "id": "databricks-unity-catalog",
+          "title": "Use fully qualified Unity Catalog names",
+          "language": "sql",
+          "code": "select customer_id, sum(amount) as revenue\nfrom prod.silver.orders\ngroup by customer_id;",
+          "why": "Unity Catalog organizes governed objects in a catalog.schema.object namespace shared across attached workspaces.",
+          "remember": "Make environment/domain ownership explicit in catalog and schema names instead of relying on an implicit current database.",
+          "tags": [
+            "unity-catalog",
+            "governance",
+            "namespace"
+          ]
+        },
+        {
+          "id": "databricks-autoloader",
+          "title": "Incrementally ingest files with Auto Loader",
+          "language": "python",
+          "code": "raw = (spark.readStream\n    .format(\"cloudFiles\")\n    .option(\"cloudFiles.format\", \"json\")\n    .option(\"cloudFiles.useManagedFileEvents\", \"true\")\n    .load(\"/Volumes/prod/raw/events\"))",
+          "why": "Auto Loader incrementally discovers new files; Databricks recommends managed file events for scalable low-cost discovery when available.",
+          "remember": "Use a durable source path/checkpoint and choose schema-evolution behavior deliberately.",
+          "tags": [
+            "autoloader",
+            "cloudfiles",
+            "ingestion"
+          ]
+        },
+        {
+          "id": "databricks-medallion",
+          "title": "Promote data through governed medallion schemas",
+          "language": "python",
+          "code": "bronze = spark.table(\"prod.bronze.orders\")\nsilver = bronze.filter(\"order_id is not null\").dropDuplicates([\"order_id\"])\nsilver.write.mode(\"overwrite\").saveAsTable(\"prod.silver.orders\")\nspark.table(\"prod.silver.orders\").groupBy(\"customer_id\").sum(\"amount\").write.mode(\"overwrite\").saveAsTable(\"prod.gold.customer_revenue\")",
+          "why": "Medallion layers progressively improve quality from raw ingestion to validated detail and business-ready outputs.",
+          "remember": "Bronze preserves source fidelity; Silver validates; Gold serves business use cases.",
+          "tags": [
+            "medallion",
+            "lakehouse",
+            "unity-catalog"
+          ],
+          "concept": "medallion-layers"
+        },
+        {
+          "id": "databricks-bundle-job",
+          "title": "Declare a repeatable job in a bundle",
+          "language": "yaml",
+          "code": "bundle:\n  name: orders-etl\nresources:\n  jobs:\n    orders_etl:\n      name: orders-etl\n      tasks:\n        - task_key: transform\n          notebook_task:\n            notebook_path: ./src/transform.ipynb",
+          "why": "Declarative Automation Bundles keep job definitions with source code and provide explicit deployable targets.",
+          "remember": "Validate -> deploy -> run; keep environment differences in bundle targets rather than hand-editing production jobs.",
+          "tags": [
+            "bundle",
+            "jobs",
+            "deployment"
+          ]
+        }
+      ],
+      "apis": [
+        {
+          "name": "Unity Catalog identifier",
+          "signature": "catalog.schema.object",
+          "whatFor": "Address governed tables/views/models with an explicit three-level namespace.",
+          "example": "prod.silver.orders"
+        },
+        {
+          "name": "Auto Loader",
+          "signature": "spark.readStream.format(\"cloudFiles\")",
+          "whatFor": "Incrementally ingest new files from cloud object storage.",
+          "example": ".option(\"cloudFiles.format\",\"json\")"
+        },
+        {
+          "name": "Databricks bundle CLI",
+          "signature": "databricks bundle validate|deploy|run",
+          "whatFor": "Validate, deploy and run declaratively defined Databricks resources.",
+          "example": "databricks bundle deploy -t prod"
+        }
+      ],
+      "practices": [
+        {
+          "title": "Millions of arriving files",
+          "prompt": "Cloud object storage receives new JSON files continuously and full directory scans are becoming expensive.",
+          "pattern": "Auto Loader + managed file events",
+          "reveal": "Use cloudFiles with managed file events, deliberate schema evolution, and a durable per-stream checkpoint."
+        },
+        {
+          "title": "Same job in dev and prod",
+          "prompt": "A notebook job must be reproducibly deployed to different Databricks targets without manual UI edits.",
+          "pattern": "Declarative Automation Bundle",
+          "reveal": "Keep the job in databricks.yml/resources and put environment-specific workspace/compute settings in targets."
         }
       ]
     }
