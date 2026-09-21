@@ -80,7 +80,7 @@ export function App({
     setWorkspaces(current=>current.map(workspace=>workspace.id===active.id?fn(workspace):workspace));
   };
 
-  const openTarget=(techId:string,mode?:Mode,focusId?:string,focusKind?:"pattern"|"api")=>{
+  const openTarget=(techId:string,mode?:Mode,focusId?:string,focusKind?:"pattern"|"api"|"update")=>{
     setReviewOpen(false);
     setUpdatesOpen(false);
     setCompareConcept(undefined);
@@ -94,7 +94,7 @@ export function App({
 
   const openSearchResult=(result:SearchResult)=>{
     setQuery("");
-    const focusKind=result.kind==="pattern"?"pattern":result.kind==="api"?"api":undefined;
+    const focusKind=result.kind==="pattern"?"pattern":result.kind==="api"?"api":result.kind==="update"?"update":undefined;
     openTarget(result.techId,result.mode,focusKind?result.id:undefined,focusKind);
   };
 
@@ -413,7 +413,7 @@ function Pane({
         />
       }
       {state.mode==="practice"&&<Practice tech={tech}/>}
-      {state.mode==="updates"&&<UpdatesCenter techId={tech.id} onOpenPattern={onOpenRelated}/>}
+      {state.mode==="updates"&&<UpdatesCenter techId={tech.id} focusId={state.focusKind==="update"?state.focusId:undefined} onOpenPattern={onOpenRelated}/>}
     </div>
   </section>;
 }
