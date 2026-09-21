@@ -5,6 +5,7 @@ import {
   conceptTitle,
   knowledgeDomId,
   matchingTechnologyIds,
+  patternFamilies,
   patternsForConcept,
   relatedPatterns,
   searchKnowledge
@@ -55,6 +56,13 @@ describe("matchingTechnologyIds", () => {
 });
 
 describe("pattern families", () => {
+  it("indexes discoverable families by coverage", () => {
+    const families=patternFamilies();
+    expect(families[0]?.concept).toBe("latest-row");
+    expect(families.every(family=>family.count>=2)).toBe(true);
+    expect(families.some(family=>family.concept==="anti-join" && family.count>=5)).toBe(true);
+  });
+
   it("returns complete comparison families with readable titles", () => {
     const anti=patternsForConcept("anti-join");
     const aggregate=patternsForConcept("grouped-aggregation");
