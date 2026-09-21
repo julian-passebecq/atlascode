@@ -56,7 +56,7 @@ export function PatternCard({
     {related.length>0&&<div className="relatedStrip">
       <div className="relatedLabel">Same pattern in</div>
       <div className="relatedLinks">
-        {related.slice(0,8).map(item=>
+        {related.map(item=>
           <button key={item.techId+":"+item.pattern.id} onClick={()=>onOpenRelated(item.techId,item.pattern.id)}>
             {item.techName}
           </button>
