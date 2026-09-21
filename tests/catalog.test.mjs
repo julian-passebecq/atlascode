@@ -13,7 +13,7 @@ const requiredTechnologies = [
 ];
 
 test("catalog metadata is versioned", () => {
-  assert.equal(catalog.schemaVersion, 1);
+  assert.equal(catalog.schemaVersion, 2);
   assert.match(catalog.contentVersion, /^\d+\.\d+\.\d+$/);
   assert.match(catalog.reviewedAt, /^\d{4}-\d{2}-\d{2}$/);
 });
@@ -66,5 +66,26 @@ test("every technology has usable learning surfaces", () => {
       assert.ok(practice.title?.trim() && practice.prompt?.trim(), tech.id + " has incomplete practice");
       assert.ok(practice.pattern?.trim() && practice.reveal?.trim(), tech.id + " practice lacks reveal");
     }
+  }
+});
+
+
+test("cross-technology concepts are comparable", () => {
+  const byConcept = new Map();
+  for (const tech of catalog.technologies) {
+    for (const pattern of tech.patterns) {
+      if (!pattern.concept) continue;
+      const refs = byConcept.get(pattern.concept) || [];
+      refs.push({ techId: tech.id, patternId: pattern.id });
+      byConcept.set(pattern.concept, refs);
+    }
+  }
+
+  assert.ok(byConcept.has("latest-row"), "latest-row concept is required");
+  const latest = byConcept.get("latest-row");
+  assert.ok(new Set(latest.map(item => item.techId)).size >= 6, "latest-row should span at least 6 technologies");
+
+  for (const [concept, refs] of byConcept) {
+    assert.ok(refs.length >= 2, "concept needs at least two comparable patterns: " + concept);
   }
 });
