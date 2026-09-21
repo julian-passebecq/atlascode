@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "contentVersion": "0.9.0",
+  "contentVersion": "0.9.1",
   "reviewedAt": "2026-09-21",
   "technologies": [
     {
@@ -1861,17 +1861,6 @@
       ],
       "patterns": [
         {
-          "id": "fastapi-core",
-          "title": "FastAPI core pattern",
-          "language": "text",
-          "code": "Pydantic, Depends, response models, HTTPException",
-          "why": "A compact recognition card for FastAPI.",
-          "remember": "Use this page as a launch point; AI refreshes can expand it into deeper version-aware patterns.",
-          "tags": [
-            "core"
-          ]
-        },
-        {
           "id": "fastapi-depends",
           "title": "Inject request-scoped dependencies",
           "language": "python",
@@ -1983,17 +1972,6 @@
         }
       ],
       "patterns": [
-        {
-          "id": "kubernetes-core",
-          "title": "Kubernetes core pattern",
-          "language": "text",
-          "code": "Deployment, Service, probes, requests and limits",
-          "why": "A compact recognition card for Kubernetes.",
-          "remember": "Use this page as a launch point; AI refreshes can expand it into deeper version-aware patterns.",
-          "tags": [
-            "core"
-          ]
-        },
         {
           "id": "k8s-probes",
           "title": "Use startup, readiness and liveness for different questions",
@@ -2112,18 +2090,6 @@
       ],
       "patterns": [
         {
-          "id": "linux-core",
-          "title": "Linux core pattern",
-          "language": "text",
-          "code": "find, grep, journalctl, ss, lsof",
-          "why": "A compact recognition card for Linux.",
-          "remember": "Use this page as a launch point; AI refreshes can expand it into deeper version-aware patterns.",
-          "tags": [
-            "core"
-          ],
-          "concept": "pipeline-filter"
-        },
-        {
           "id": "linux-journal",
           "title": "Trace a failing service from logs",
           "language": "bash",
@@ -2162,6 +2128,21 @@
             "script",
             "errors"
           ]
+        },
+        {
+          "id": "linux-pipeline-filter",
+          "title": "Compose small tools through a pipeline",
+          "language": "bash",
+          "code": "find logs -type f -name \"*.log\" -mtime -1 -print0 |\n  xargs -0 grep -h \"ERROR\" |\n  sort |\n  uniq -c |\n  sort -nr",
+          "why": "Unix tools are most useful when each stage performs one operation and streams its output to the next.",
+          "remember": "Compose find/filter/aggregate stages instead of writing one large shell loop.",
+          "tags": [
+            "pipeline",
+            "grep",
+            "find",
+            "stream"
+          ],
+          "concept": "pipeline-filter"
         }
       ],
       "apis": [
@@ -2223,18 +2204,6 @@
         }
       ],
       "patterns": [
-        {
-          "id": "powershell-core",
-          "title": "PowerShell core pattern",
-          "language": "text",
-          "code": "Where-Object, Select-Object, Invoke-RestMethod",
-          "why": "A compact recognition card for PowerShell.",
-          "remember": "Use this page as a launch point; AI refreshes can expand it into deeper version-aware patterns.",
-          "tags": [
-            "core"
-          ],
-          "concept": "pipeline-filter"
-        },
         {
           "id": "ps-objects",
           "title": "Filter objects instead of parsing text",
@@ -2350,17 +2319,6 @@
       ],
       "patterns": [
         {
-          "id": "dax-core",
-          "title": "DAX core pattern",
-          "language": "text",
-          "code": "CALCULATE, filter context, DIVIDE, REMOVEFILTERS",
-          "why": "A compact recognition card for DAX.",
-          "remember": "Use this page as a launch point; AI refreshes can expand it into deeper version-aware patterns.",
-          "tags": [
-            "core"
-          ]
-        },
-        {
           "id": "dax-calculate",
           "title": "Change filter context with CALCULATE",
           "language": "dax",
@@ -2472,18 +2430,6 @@
         }
       ],
       "patterns": [
-        {
-          "id": "excel-core",
-          "title": "Excel core pattern",
-          "language": "text",
-          "code": "XLOOKUP, FILTER, LET, SUMIFS",
-          "why": "A compact recognition card for Excel.",
-          "remember": "Use this page as a launch point; AI refreshes can expand it into deeper version-aware patterns.",
-          "tags": [
-            "core"
-          ],
-          "concept": "keyed-lookup"
-        },
         {
           "id": "excel-xlookup",
           "title": "Lookup by a stable key",
@@ -2597,17 +2543,6 @@
         }
       ],
       "patterns": [
-        {
-          "id": "docker-core",
-          "title": "Docker core pattern",
-          "language": "text",
-          "code": "multi-stage builds, volumes, service DNS, logs",
-          "why": "A compact recognition card for Docker.",
-          "remember": "Use this page as a launch point; AI refreshes can expand it into deeper version-aware patterns.",
-          "tags": [
-            "core"
-          ]
-        },
         {
           "id": "docker-multistage",
           "title": "Keep build tooling out of the runtime image",
@@ -2725,17 +2660,6 @@
         }
       ],
       "patterns": [
-        {
-          "id": "git-core",
-          "title": "Git core pattern",
-          "language": "text",
-          "code": "status, diff, branch, rebase, reflog",
-          "why": "A compact recognition card for Git.",
-          "remember": "Use this page as a launch point; AI refreshes can expand it into deeper version-aware patterns.",
-          "tags": [
-            "core"
-          ]
-        },
         {
           "id": "git-small-commit",
           "title": "Build one reviewable commit",
