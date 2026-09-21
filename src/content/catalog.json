@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "contentVersion": "0.7.0",
+  "contentVersion": "0.8.0",
   "reviewedAt": "2026-09-21",
   "technologies": [
     {
@@ -828,6 +828,32 @@
             "grain"
           ],
           "concept": "grouped-aggregation"
+        },
+        {
+          "id": "sql-lag-gap",
+          "title": "Compare each row to the previous event",
+          "language": "sql",
+          "code": "select\n  user_id,\n  event_ts,\n  lag(event_ts) over (\n    partition by user_id\n    order by event_ts\n  ) as previous_event_ts\nfrom events;",
+          "why": "LAG reads a previous row within an ordered partition without a self-join.",
+          "remember": "Partition defines whose history you compare; order defines what 'previous' means.",
+          "tags": [
+            "window",
+            "lag",
+            "sequence"
+          ]
+        },
+        {
+          "id": "sql-conditional-agg",
+          "title": "Turn row conditions into measures",
+          "language": "sql",
+          "code": "select\n  customer_id,\n  sum(case when status = 'paid' then amount else 0 end) as paid_revenue,\n  sum(case when status = 'refund' then amount else 0 end) as refunded\nfrom orders\ngroup by customer_id;",
+          "why": "Conditional aggregation computes multiple business measures at one grouped grain.",
+          "remember": "Keep the GROUP BY grain fixed; change the CASE expression for each metric.",
+          "tags": [
+            "aggregation",
+            "case",
+            "metrics"
+          ]
         }
       ],
       "apis": [
@@ -917,6 +943,32 @@
             "parquet"
           ],
           "concept": "grouped-aggregation"
+        },
+        {
+          "id": "duckdb-copy-parquet",
+          "title": "Materialize a reusable Parquet result",
+          "language": "sql",
+          "code": "copy (\n  select *\n  from read_csv_auto('incoming/orders.csv')\n  where amount > 0\n)\nto 'curated/orders.parquet'\n(format parquet, compression zstd);",
+          "why": "COPY turns an analytical query result into an efficient reusable columnar artifact.",
+          "remember": "Query raw flexibly; materialize clean reusable outputs as Parquet.",
+          "tags": [
+            "copy",
+            "parquet",
+            "materialization"
+          ]
+        },
+        {
+          "id": "duckdb-profile",
+          "title": "Inspect query execution before rewriting SQL",
+          "language": "sql",
+          "code": "explain analyze\nselect customer_id, sum(amount)\nfrom read_parquet('orders/*.parquet')\ngroup by customer_id;",
+          "why": "EXPLAIN ANALYZE shows the executed operator tree and timing information.",
+          "remember": "Measure scans, joins and aggregates before changing a query blindly.",
+          "tags": [
+            "explain",
+            "profile",
+            "performance"
+          ]
         }
       ],
       "apis": [
@@ -1094,6 +1146,45 @@
             "cdc"
           ],
           "concept": "upsert-by-key"
+        },
+        {
+          "id": "bigquery-unnest",
+          "title": "Flatten repeated fields with UNNEST",
+          "language": "sql",
+          "code": "select\n  order_id,\n  item.sku,\n  item.quantity\nfrom `raw.orders`\ncross join unnest(items) as item;",
+          "why": "UNNEST converts array elements into rows so nested records can participate in relational operations.",
+          "remember": "Every UNNEST can multiply rows; validate cardinality before aggregating.",
+          "tags": [
+            "unnest",
+            "array",
+            "nested-data"
+          ]
+        },
+        {
+          "id": "bigquery-partition",
+          "title": "Prune partitions explicitly",
+          "language": "sql",
+          "code": "select customer_id, sum(amount) as revenue\nfrom `analytics.orders`\nwhere order_date between date '2026-09-01' and date '2026-09-21'\ngroup by customer_id;",
+          "why": "Filtering on the partitioning column limits scanned partitions and usually reduces cost and latency.",
+          "remember": "Partition filters are both a correctness boundary and a cost-control habit.",
+          "tags": [
+            "partition",
+            "cost",
+            "filter"
+          ]
+        },
+        {
+          "id": "bigquery-safe-cast",
+          "title": "Make dirty casts non-fatal",
+          "language": "sql",
+          "code": "select\n  safe_cast(raw_customer_id as int64) as customer_id,\n  safe_cast(raw_amount as numeric) as amount\nfrom landing.orders;",
+          "why": "SAFE_CAST returns NULL rather than aborting the whole query when a value cannot be converted.",
+          "remember": "Use safe casts at dirty ingestion boundaries, then measure and handle the resulting NULLs.",
+          "tags": [
+            "safe-cast",
+            "quality",
+            "ingestion"
+          ]
         }
       ],
       "apis": [
@@ -1164,6 +1255,45 @@
             "cdc"
           ],
           "concept": "upsert-by-key"
+        },
+        {
+          "id": "snowflake-variant",
+          "title": "Project typed columns from VARIANT",
+          "language": "sql",
+          "code": "select\n  payload:customer:id::string as customer_id,\n  payload:amount::number(18,2) as amount\nfrom raw_events\nwhere payload:type::string = 'order';",
+          "why": "VARIANT lets semi-structured data land quickly while typed projections create a stable downstream contract.",
+          "remember": "Keep raw flexibility at landing; cast into stable types at the semantic boundary.",
+          "tags": [
+            "variant",
+            "json",
+            "typing"
+          ]
+        },
+        {
+          "id": "snowflake-flatten",
+          "title": "Expand nested arrays with FLATTEN",
+          "language": "sql",
+          "code": "select\n  o.order_id,\n  item.value:sku::string as sku,\n  item.value:qty::number as qty\nfrom orders o,\nlateral flatten(input => o.payload:items) item;",
+          "why": "FLATTEN turns array/object members into rows while retaining correlation to the source row.",
+          "remember": "FLATTEN changes row cardinality—check counts before and after.",
+          "tags": [
+            "flatten",
+            "variant",
+            "nested-data"
+          ]
+        },
+        {
+          "id": "snowflake-try-cast",
+          "title": "Quarantine invalid values with TRY conversions",
+          "language": "sql",
+          "code": "select\n  try_to_number(raw_amount, 18, 2) as amount,\n  try_to_timestamp_ntz(raw_ts) as event_ts\nfrom landing.events;",
+          "why": "TRY conversion functions return NULL for invalid values instead of failing the entire statement.",
+          "remember": "Use TRY_* at ingestion boundaries, then profile invalid NULL outcomes separately.",
+          "tags": [
+            "try-cast",
+            "quality",
+            "ingestion"
+          ]
         }
       ],
       "apis": [
@@ -1220,6 +1350,58 @@
             "latest"
           ],
           "concept": "latest-row"
+        },
+        {
+          "id": "tsql-apply",
+          "title": "Top child per parent with OUTER APPLY",
+          "language": "sql",
+          "code": "select\n  c.customer_id,\n  x.order_id,\n  x.order_date\nfrom dbo.customer c\nouter apply (\n  select top (1) o.order_id, o.order_date\n  from dbo.orders o\n  where o.customer_id = c.customer_id\n  order by o.order_date desc\n) x;",
+          "why": "APPLY is useful for correlated table expressions such as top-N related rows.",
+          "remember": "OUTER APPLY preserves the parent even when the correlated expression returns no row.",
+          "tags": [
+            "apply",
+            "top",
+            "correlated"
+          ]
+        },
+        {
+          "id": "tsql-temp",
+          "title": "Materialize a reusable intermediate into a temp table",
+          "language": "sql",
+          "code": "select customer_id, sum(amount) as revenue\ninto #revenue\nfrom dbo.orders\ngroup by customer_id;\n\ncreate index IX_revenue_customer\non #revenue(customer_id);",
+          "why": "A temp table can clarify multi-step procedures and can be indexed when the intermediate is reused.",
+          "remember": "Materialize when reuse, statistics or debugging justify it—not for every CTE.",
+          "tags": [
+            "temp-table",
+            "index",
+            "procedure"
+          ]
+        },
+        {
+          "id": "tsql-try-convert",
+          "title": "Convert dirty input without aborting the batch",
+          "language": "sql",
+          "code": "select\n  try_convert(date, raw_order_date) as order_date,\n  try_convert(decimal(18,2), raw_amount) as amount\nfrom staging.orders;",
+          "why": "TRY_CONVERT returns NULL for invalid inputs and lets the batch continue.",
+          "remember": "Safe conversion is useful at staging boundaries; invalid NULLs still need quality checks.",
+          "tags": [
+            "try-convert",
+            "quality",
+            "staging"
+          ]
+        },
+        {
+          "id": "tsql-running-total",
+          "title": "Running total with an ordered window",
+          "language": "sql",
+          "code": "select\n  customer_id,\n  order_date,\n  sum(amount) over (\n    partition by customer_id\n    order by order_date\n    rows between unbounded preceding and current row\n  ) as running_revenue\nfrom dbo.orders;",
+          "why": "An explicit ROWS frame makes the cumulative window semantics visible.",
+          "remember": "Partition chooses the entity; order chooses sequence; frame chooses which rows contribute.",
+          "tags": [
+            "window",
+            "running-total",
+            "rows-frame"
+          ]
         }
       ],
       "apis": [
@@ -1290,6 +1472,45 @@
             "cdc"
           ],
           "concept": "upsert-by-key"
+        },
+        {
+          "id": "postgres-jsonb",
+          "title": "Project fields from JSONB",
+          "language": "sql",
+          "code": "select\n  payload ->> 'event_type' as event_type,\n  payload #>> '{customer,id}' as customer_id\nfrom raw_events;",
+          "why": "JSONB operators let you extract scalar values while preserving the original semi-structured payload.",
+          "remember": "Use -> for JSON, ->> for text, and #>> for a nested text path.",
+          "tags": [
+            "jsonb",
+            "semi-structured",
+            "operators"
+          ]
+        },
+        {
+          "id": "postgres-explain",
+          "title": "Inspect actual plan and buffer use",
+          "language": "sql",
+          "code": "explain (analyze, buffers)\nselect customer_id, sum(amount)\nfrom orders\nwhere order_date >= current_date - 30\ngroup by customer_id;",
+          "why": "Actual execution plus buffer statistics show whether time is spent scanning, joining, sorting or reading pages.",
+          "remember": "Check the real plan before adding an index or rewriting the query.",
+          "tags": [
+            "explain",
+            "buffers",
+            "performance"
+          ]
+        },
+        {
+          "id": "postgres-lateral",
+          "title": "Correlate a top-N subquery with LATERAL",
+          "language": "sql",
+          "code": "select c.customer_id, o.order_id, o.order_date\nfrom customer c\nleft join lateral (\n  select order_id, order_date\n  from orders o\n  where o.customer_id = c.customer_id\n  order by order_date desc\n  limit 1\n) o on true;",
+          "why": "LATERAL allows a subquery in FROM to reference columns from rows produced earlier in the FROM list.",
+          "remember": "Use LATERAL when each parent row needs its own small correlated relation.",
+          "tags": [
+            "lateral",
+            "correlated",
+            "top-n"
+          ]
         }
       ],
       "apis": [
@@ -1346,6 +1567,46 @@
             "mysql"
           ],
           "concept": "latest-row"
+        },
+        {
+          "id": "mysql-upsert",
+          "title": "Upsert on a unique-key collision",
+          "language": "sql",
+          "code": "insert into customer(customer_id, name, updated_at)\nvalues (?, ?, ?)\non duplicate key update\n  name = values(name),\n  updated_at = values(updated_at);",
+          "why": "A duplicate-key clause turns a unique-key conflict into an update path.",
+          "remember": "The unique key defines the conflict boundary; be explicit about fields allowed to change.",
+          "tags": [
+            "upsert",
+            "duplicate-key",
+            "idempotency"
+          ],
+          "concept": "upsert-by-key"
+        },
+        {
+          "id": "mysql-json",
+          "title": "Read typed values from JSON",
+          "language": "sql",
+          "code": "select\n  json_unquote(json_extract(payload, '$.event_type')) as event_type,\n  json_extract(payload, '$.amount') as amount\nfrom raw_events;",
+          "why": "JSON functions allow semi-structured payloads to coexist with relational columns.",
+          "remember": "Extract intentionally and cast/validate values before downstream arithmetic or joins.",
+          "tags": [
+            "json",
+            "json-extract",
+            "semi-structured"
+          ]
+        },
+        {
+          "id": "mysql-explain",
+          "title": "Use EXPLAIN ANALYZE before guessing",
+          "language": "sql",
+          "code": "explain analyze\nselect customer_id, sum(amount)\nfrom orders\nwhere order_date >= current_date - interval 30 day\ngroup by customer_id;",
+          "why": "The execution plan shows access paths and actual operator timing for the query.",
+          "remember": "Observe the plan first; indexes are a response to access patterns, not a default fix.",
+          "tags": [
+            "explain",
+            "performance",
+            "index"
+          ]
         }
       ],
       "apis": [
