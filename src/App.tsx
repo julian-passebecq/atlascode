@@ -147,30 +147,36 @@ export function App({
     </header>
 
     <div className="workspaceBar">
-      <div className="workspaceTabs">
+      <div className="workspaceTabs" role="tablist" aria-label="Workspaces">
         {workspaces.map(workspace=>
-          <button
+          <div
             key={workspace.id}
             className={workspace.id===active.id?"workspaceTab active":"workspaceTab"}
-            onClick={()=>{
-              setActiveId(workspace.id);
-              setActivePane("left");
-              setReviewOpen(false);
-            }}
           >
-            <span>{workspace.title}</span>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={workspace.id===active.id}
+              className="workspaceTabButton"
+              onClick={()=>{
+                setActiveId(workspace.id);
+                setActivePane("left");
+                setReviewOpen(false);
+              }}
+            >
+              <span>{workspace.title}</span>
+            </button>
             {workspaces.length>1&&
-              <span
+              <button
+                type="button"
                 className="workspaceClose"
-                onClick={event=>{
-                  event.stopPropagation();
-                  closeWorkspace(workspace.id);
-                }}
+                aria-label={"Close "+workspace.title+" workspace"}
+                onClick={()=>closeWorkspace(workspace.id)}
               >
                 <Dismiss20Regular/>
-              </span>
+              </button>
             }
-          </button>
+          </div>
         )}
         <Tooltip content="New workspace" relationship="label">
           <Button appearance="subtle" icon={<Add24Regular/>} onClick={addWorkspace}/>
@@ -180,6 +186,7 @@ export function App({
       <div className="workspaceTools">
         <Button
           appearance={reviewOpen?"primary":"subtle"}
+          aria-pressed={reviewOpen}
           icon={<Star24Filled/>}
           onClick={()=>setReviewOpen(value=>!value)}
         >
@@ -187,6 +194,7 @@ export function App({
         </Button>
         <Button
           appearance={active.split?"primary":"subtle"}
+          aria-pressed={active.split}
           icon={<SplitHorizontal24Regular/>}
           onClick={()=>mutate(workspace=>{
             const next={...workspace,split:!workspace.split};
@@ -303,7 +311,7 @@ function Pane({
     return ()=>cancelAnimationFrame(frame);
   },[state.focusSeq,state.focusId,state.focusKind]);
 
-  return <section className={active?"pane activePane":"pane"} onMouseDown={onFocus}>
+  return <section className={active?"pane activePane":"pane"} onMouseDown={onFocus} onFocusCapture={onFocus}>
     <div className="paneHeader">
       <div className="paneIdentity">
         <div className="heroGlyph">{tech.name.slice(0,2).toUpperCase()}</div>
@@ -458,7 +466,7 @@ function PracticeCard({item}:{item:Technology["practices"][number]}){
         <strong>{item.title}</strong>
         <p>{item.prompt}</p>
       </div>
-      <Button appearance="secondary" onClick={()=>setOpen(value=>!value)}>
+      <Button appearance="secondary" aria-expanded={open} onClick={()=>setOpen(value=>!value)}>
         {open?"Hide pattern":"Reveal pattern"}
       </Button>
     </div>
