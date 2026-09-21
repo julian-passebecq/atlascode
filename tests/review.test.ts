@@ -3,6 +3,7 @@ import {
   loadReviewState,
   markReviewed,
   parseReviewState,
+  pruneReviewState,
   reviewAgeDays,
   saveReviewState,
   toggleReviewPattern
@@ -36,6 +37,24 @@ describe("review persistence", () => {
   it("reports storage write failure without throwing", () => {
     const storage={setItem:()=>{throw new Error("quota");}};
     expect(saveReviewState({},storage)).toBe(false);
+  });
+});
+
+describe("review cleanup", () => {
+  it("removes orphaned catalog entries while keeping valid review state", () => {
+    const state=parseReviewState({
+      "sql-latest":{
+        addedAt:"2026-09-20T10:00:00.000Z"
+      },
+      "removed-pattern":{
+        addedAt:"2026-09-20T11:00:00.000Z",
+        lastReviewed:"2026-09-21T10:00:00.000Z"
+      }
+    });
+
+    const cleaned=pruneReviewState(state,new Set(["sql-latest"]));
+    expect(Object.keys(cleaned)).toEqual(["sql-latest"]);
+    expect(cleaned["removed-pattern"]).toBeUndefined();
   });
 });
 
