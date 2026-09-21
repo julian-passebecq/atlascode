@@ -43,6 +43,7 @@ import {
   PaneKey,
   PaneState,
   saveWorkspaces,
+  visiblePaneKey,
   Workspace,
   workspaceTitle
 } from "./core/workspaces";
@@ -113,7 +114,14 @@ export function App({
     const index=workspaces.findIndex(workspace=>workspace.id===id);
     const next=workspaces.filter(workspace=>workspace.id!==id);
     setWorkspaces(next);
-    if(id===activeId) setActiveId(next[Math.max(0,index-1)].id);
+    if(id===activeId){
+      const replacement=next[Math.max(0,index-1)];
+      setActiveId(replacement.id);
+      setActivePane(visiblePaneKey(replacement.split,"left"));
+      setReviewOpen(false);
+      setUpdatesOpen(false);
+      setCompareConcept(undefined);
+    }
   };
 
   const toggleFavorite=(patternId:string)=>{
@@ -214,10 +222,13 @@ export function App({
           appearance={active.split?"primary":"subtle"}
           aria-pressed={active.split}
           icon={<SplitHorizontal24Regular/>}
-          onClick={()=>mutate(workspace=>{
-            const next={...workspace,split:!workspace.split};
-            return {...next,title:workspaceTitle(next)};
-          })}
+          onClick={()=>{
+            if(active.split) setActivePane("left");
+            mutate(workspace=>{
+              const next={...workspace,split:!workspace.split};
+              return {...next,title:workspaceTitle(next)};
+            });
+          }}
         >
           Split
         </Button>
