@@ -83,3 +83,20 @@
   .compareHeaderActions{justify-content:flex-start}
   .compareGrid{grid-template-columns:1fr}
 }
+
+
+.reviewHeaderActions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.sessionCard{padding:18px!important;max-width:860px;margin:0 auto}
+.sessionMeta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.sessionCard h3{margin:0 0 8px}
+.sessionWhy{margin:0 0 14px;color:var(--muted);font-size:13px;line-height:1.5}
+.sessionRecall{display:flex;flex-direction:column;gap:5px;padding:18px;border:1px dashed var(--border);border-radius:8px;background:var(--surface-2);color:var(--muted);margin:8px 0 14px}
+.sessionRecall strong{color:var(--text)}
+.sessionCode{margin-top:8px;border-radius:7px;overflow:hidden}
+.sessionActions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:16px}
+.sessionComplete{padding:28px!important;max-width:640px;margin:60px auto 0}
+.sessionComplete h2{margin:0 0 8px}
+@media(max-width:760px){
+  .reviewHeaderActions{justify-content:flex-start}
+  .sessionCard{padding:14px!important}
+}
