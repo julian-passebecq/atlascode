@@ -59,6 +59,20 @@ test("learning tracks are valid and cover the intended study paths", () => {
   assert.ok(byId.get("databricks").tracks.includes("cloud-lakehouse"));
   assert.ok(byId.get("bash").tracks.includes("devops"));
   assert.ok(byId.get("kubernetes").tracks.includes("devops"));
+
+  const expectedDefaults = {
+    "data-analyst": "python",
+    "data-engineering": "airflow",
+    "bi-warehousing": "dbt",
+    "cloud-lakehouse": "fabric",
+    "devops": "kubernetes"
+  };
+
+  for (const [track, defaultTechId] of Object.entries(expectedDefaults)) {
+    const tech = byId.get(defaultTechId);
+    assert.ok(tech, track + " default technology is missing: " + defaultTechId);
+    assert.ok(tech.tracks.includes(track), defaultTechId + " must belong to " + track);
+  }
 });
 
 test("technology ids and pattern ids are unique", () => {
