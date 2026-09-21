@@ -5,7 +5,7 @@ export type PaneState = {
   techId:string;
   mode:Mode;
   focusId?:string;
-  focusKind?:"pattern"|"api";
+  focusKind?:"pattern"|"api"|"update";
   focusSeq?:number;
 };
 export type Workspace = {
