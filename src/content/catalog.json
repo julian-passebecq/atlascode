@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "contentVersion": "0.4.0",
+  "contentVersion": "0.5.0",
   "reviewedAt": "2026-09-21",
   "technologies": [
     {
@@ -512,6 +512,46 @@
             "dag",
             "taskflow"
           ]
+        },
+        {
+          "id": "af-dynamic-map",
+          "title": "Dynamic task mapping",
+          "language": "python",
+          "code": "@task\ndef partitions():\n    return [\"2026-09-19\", \"2026-09-20\", \"2026-09-21\"]\n\n@task\ndef process(day):\n    return load_partition(day)\n\nprocess.expand(day=partitions())",
+          "why": "Dynamic task mapping creates separate runtime task instances from upstream data, preserving retries and observability per mapped item.",
+          "remember": "Use expand() when the number of parallel task instances is known only at run time.",
+          "tags": [
+            "dynamic-mapping",
+            "taskflow",
+            "parallelism"
+          ]
+        },
+        {
+          "id": "af-data-interval",
+          "title": "Idempotent partition from the data interval",
+          "language": "python",
+          "code": "@task\ndef load_partition(**context):\n    start = context[\"data_interval_start\"]\n    end = context[\"data_interval_end\"]\n    replace_partition(start, end)",
+          "why": "Airflow schedules logical data intervals; using that interval makes backfills and retries target the same business slice.",
+          "remember": "A retry should rewrite the same logical partition, not append a second copy.",
+          "tags": [
+            "idempotency",
+            "data-interval",
+            "backfill"
+          ],
+          "concept": "idempotent-batch"
+        },
+        {
+          "id": "af-small-xcom",
+          "title": "Pass metadata, not datasets",
+          "language": "python",
+          "code": "@task\ndef extract():\n    path = write_parquet(\"/lake/raw/orders\")\n    return {\"path\": path, \"row_count\": 182340}\n\n@task\ndef transform(meta):\n    return transform_path(meta[\"path\"])",
+          "why": "TaskFlow can move small results through XCom, but large datasets belong in durable storage.",
+          "remember": "XCom should coordinate tasks; object storage/database tables should carry the data.",
+          "tags": [
+            "xcom",
+            "task-boundary",
+            "metadata"
+          ]
         }
       ],
       "apis": [
@@ -582,6 +622,45 @@
           "remember": "Incremental logic must remain correct on a full refresh.",
           "tags": [
             "incremental"
+          ]
+        },
+        {
+          "id": "dbt-tests",
+          "title": "Put grain assumptions into tests",
+          "language": "yaml",
+          "code": "models:\n  - name: dim_customer\n    columns:\n      - name: customer_id\n        data_tests:\n          - not_null\n          - unique\n      - name: country_code\n        data_tests:\n          - relationships:\n              arguments:\n                to: ref('dim_country')\n                field: country_code",
+          "why": "Tests turn model-grain and relationship expectations into executable project contracts.",
+          "remember": "Test the key, nullability, accepted domain, and important relationships—not every column indiscriminately.",
+          "tags": [
+            "tests",
+            "quality",
+            "relationships"
+          ]
+        },
+        {
+          "id": "dbt-macro",
+          "title": "Extract repeated SQL into a macro",
+          "language": "sql",
+          "code": "{% macro cents_to_currency(column_name) %}\n  ({{ column_name }} / 100.0)\n{% endmacro %}\n\nselect\n  order_id,\n  {{ cents_to_currency('amount_cents') }} as amount\nfrom {{ ref('stg_orders') }}",
+          "why": "Macros remove repeated SQL syntax while keeping the model dependency graph in ordinary ref/source calls.",
+          "remember": "Use macros for repeated transformation mechanics, not to hide the entire model behind metaprogramming.",
+          "tags": [
+            "jinja",
+            "macro",
+            "reuse"
+          ]
+        },
+        {
+          "id": "dbt-source-freshness",
+          "title": "Declare source expectations",
+          "language": "yaml",
+          "code": "sources:\n  - name: raw\n    schema: landing\n    tables:\n      - name: orders\n        loaded_at_field: ingested_at\n        freshness:\n          warn_after: {count: 2, period: hour}\n          error_after: {count: 6, period: hour}",
+          "why": "Source metadata makes upstream data availability an explicit part of the analytics contract.",
+          "remember": "A transformation can be logically correct and still be wrong for users if the source is stale.",
+          "tags": [
+            "source",
+            "freshness",
+            "quality"
           ]
         }
       ],
@@ -1201,6 +1280,58 @@
           "remember": "Use this page as a launch point; AI refreshes can expand it into deeper version-aware patterns.",
           "tags": [
             "core"
+          ]
+        },
+        {
+          "id": "fastapi-depends",
+          "title": "Inject request-scoped dependencies",
+          "language": "python",
+          "code": "def get_session():\n    with Session(engine) as session:\n        yield session\n\n@app.get(\"/orders/{order_id}\")\ndef get_order(\n    order_id: int,\n    session: Session = Depends(get_session),\n):\n    return load_order(session, order_id)",
+          "why": "Dependency injection keeps connection/session lifecycle out of route business logic and makes dependencies replaceable in tests.",
+          "remember": "Use Depends for request-scoped infrastructure and reusable boundary checks.",
+          "tags": [
+            "dependency-injection",
+            "session",
+            "testing"
+          ]
+        },
+        {
+          "id": "fastapi-response-model",
+          "title": "Separate input and response contracts",
+          "language": "python",
+          "code": "class OrderIn(BaseModel):\n    customer_id: int\n    amount: Decimal\n\nclass OrderOut(OrderIn):\n    id: int\n    status: str\n\n@app.post(\"/orders\", response_model=OrderOut, status_code=201)\ndef create_order(payload: OrderIn):\n    return service.create(payload)",
+          "why": "Explicit request/response models make the public API contract clearer than leaking internal persistence objects.",
+          "remember": "Validate at the HTTP boundary; return a deliberately shaped response model.",
+          "tags": [
+            "pydantic",
+            "response-model",
+            "contract"
+          ]
+        },
+        {
+          "id": "fastapi-background",
+          "title": "Defer small after-response work",
+          "language": "python",
+          "code": "@app.post(\"/orders/{order_id}/confirm\")\ndef confirm(order_id: int, background_tasks: BackgroundTasks):\n    order = service.confirm(order_id)\n    background_tasks.add_task(send_confirmation, order.id)\n    return {\"status\": \"confirmed\"}",
+          "why": "BackgroundTasks is suitable for lightweight work that can happen after the response in the same application process.",
+          "remember": "Use it for small after-response tasks; use an external worker/queue for heavy or distributed jobs.",
+          "tags": [
+            "background-tasks",
+            "api",
+            "async-boundary"
+          ]
+        },
+        {
+          "id": "fastapi-exception-map",
+          "title": "Map domain errors at the HTTP boundary",
+          "language": "python",
+          "code": "@app.exception_handler(CustomerNotFound)\nasync def customer_not_found(_, exc):\n    return JSONResponse(\n        status_code=404,\n        content={\"detail\": str(exc)},\n    )",
+          "why": "A centralized exception handler prevents HTTP details from leaking through service/domain code.",
+          "remember": "Domain code raises domain errors; the API boundary decides the HTTP status and response shape.",
+          "tags": [
+            "errors",
+            "exception-handler",
+            "boundary"
           ]
         }
       ],
