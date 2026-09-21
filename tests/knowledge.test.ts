@@ -43,6 +43,9 @@ describe("searchKnowledge", () => {
 
     const docker=searchKnowledge("29.8.1", 10);
     expect(docker.some(result=>result.kind==="update" && result.techId==="docker")).toBe(true);
+
+    const prefixed=searchKnowledge("v3.3.2", 10);
+    expect(prefixed.some(result=>result.kind==="update" && result.techId==="airflow")).toBe(true);
   });
 
   it("ranks exact technology matches strongly", () => {
