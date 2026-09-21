@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "contentVersion": "0.2.0",
+  "contentVersion": "0.2.1",
   "reviewedAt": "2026-09-21",
   "technologies": [
     {
@@ -914,6 +914,10 @@
         {
           "label": "Recall 3",
           "value": "window functions"
+        },
+        {
+          "label": "Recall 4",
+          "value": "EXPLAIN ANALYZE"
         }
       ],
       "patterns": [
@@ -1126,6 +1130,10 @@
         {
           "label": "Recall 3",
           "value": "Invoke-RestMethod"
+        },
+        {
+          "label": "Recall 4",
+          "value": "-ErrorAction Stop + try/catch"
         }
       ],
       "patterns": [
