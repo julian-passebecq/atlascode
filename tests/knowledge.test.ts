@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { byId } from "../src/content/catalog";
 import {
   findPattern,
+  conceptTitle,
   knowledgeDomId,
   matchingTechnologyIds,
+  patternsForConcept,
   relatedPatterns,
   searchKnowledge
 } from "../src/core/knowledge";
@@ -49,6 +51,23 @@ describe("matchingTechnologyIds", () => {
     expect(ids.has("python")).toBe(true);
     expect(ids.has("excel")).toBe(true);
     expect(ids.size).toBeGreaterThanOrEqual(20);
+  });
+});
+
+describe("pattern families", () => {
+  it("returns complete comparison families with readable titles", () => {
+    const anti=patternsForConcept("anti-join");
+    const aggregate=patternsForConcept("grouped-aggregation");
+    const upsert=patternsForConcept("upsert-by-key");
+
+    expect(anti.length).toBeGreaterThanOrEqual(5);
+    expect(new Set(anti.map(item=>item.techId))).toEqual(
+      new Set(["duckdb","pandas","polars","pyspark","sql"])
+    );
+    expect(aggregate.length).toBeGreaterThanOrEqual(5);
+    expect(upsert.length).toBeGreaterThanOrEqual(4);
+    expect(conceptTitle("upsert-by-key")).toBe("Upsert By Key");
+    expect(patternsForConcept("missing-concept")).toEqual([]);
   });
 });
 
