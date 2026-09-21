@@ -25,7 +25,7 @@ import { byId, catalog, groups, Mode, Pattern, Technology } from "./content/cata
 import { KnowledgeSearch } from "./components/KnowledgeSearch";
 import { PatternCard } from "./components/PatternCard";
 import { ReviewQueue } from "./components/ReviewQueue";
-import { SearchResult } from "./core/knowledge";
+import { knowledgeDomId, SearchResult } from "./core/knowledge";
 import {
   loadReviewState,
   markReviewed,
@@ -35,7 +35,7 @@ import {
 } from "./core/review";
 
 type PaneKey = "left" | "right";
-type PaneState = { techId:string; mode:Mode };
+type PaneState = { techId:string; mode:Mode; focusId?:string; focusKind?:"pattern"|"api"; focusSeq?:number };
 type Workspace = {
   id:string;
   title:string;
@@ -85,6 +85,7 @@ export function App({
   const [compact,setCompact]=React.useState(false);
   const [reviewOpen,setReviewOpen]=React.useState(false);
   const [reviewState,setReviewState]=React.useState<ReviewState>(loadReviewState);
+  const focusSeq=React.useRef(0);
 
   const active=workspaces.find(workspace=>workspace.id===activeId)||workspaces[0];
 
@@ -106,10 +107,11 @@ export function App({
     return left+" + "+(byId.get(workspace.right.techId)?.name||"");
   };
 
-  const openTarget=(techId:string,mode?:Mode)=>{
+  const openTarget=(techId:string,mode?:Mode,focusId?:string,focusKind?:"pattern"|"api")=>{
     setReviewOpen(false);
+    const nextFocusSeq=++focusSeq.current;
     mutate(workspace=>{
-      const pane={...workspace[activePane],techId,...(mode?{mode}:{})};
+      const pane={...workspace[activePane],techId,...(mode?{mode}:{}),focusId,focusKind,focusSeq:nextFocusSeq};
       const next={...workspace,[activePane]:pane} as Workspace;
       return {...next,title:titleFor(next)};
     });
@@ -117,7 +119,8 @@ export function App({
 
   const openSearchResult=(result:SearchResult)=>{
     setQuery("");
-    openTarget(result.techId,result.mode);
+    const focusKind=result.kind==="pattern"?"pattern":result.kind==="api"?"api":undefined;
+    openTarget(result.techId,result.mode,focusKind?result.id:undefined,focusKind);
   };
 
   const addWorkspace=()=>{
@@ -273,7 +276,7 @@ export function App({
         <main className="reader reviewReader">
           <ReviewQueue
             state={reviewState}
-            onOpen={techId=>openTarget(techId,"patterns")}
+            onOpen={(techId,patternId)=>openTarget(techId,"patterns",patternId,"pattern")}
             onReviewed={markFavoriteReviewed}
             onRemove={toggleFavorite}
           />
@@ -290,7 +293,7 @@ export function App({
             })}
             reviewState={reviewState}
             onToggleFavorite={toggleFavorite}
-            onOpenRelated={techId=>openTarget(techId,"patterns")}
+            onOpenRelated={(techId,patternId)=>openTarget(techId,"patterns",patternId,"pattern")}
           />
           {active.split&&
             <Pane
@@ -303,7 +306,7 @@ export function App({
               })}
               reviewState={reviewState}
               onToggleFavorite={toggleFavorite}
-              onOpenRelated={techId=>openTarget(techId,"patterns")}
+              onOpenRelated={(techId,patternId)=>openTarget(techId,"patterns",patternId,"pattern")}
             />
           }
         </main>
@@ -327,9 +330,17 @@ function Pane({
   onState:(state:PaneState)=>void;
   reviewState:ReviewState;
   onToggleFavorite:(patternId:string)=>void;
-  onOpenRelated:(techId:string)=>void;
+  onOpenRelated:(techId:string,patternId:string)=>void;
 }){
   const tech=byId.get(state.techId)||catalog[0];
+
+  React.useEffect(()=>{
+    if(!state.focusId||!state.focusKind) return;
+    const frame=requestAnimationFrame(()=>{
+      document.getElementById(knowledgeDomId(state.focusKind!,state.focusId!))?.scrollIntoView({behavior:"smooth",block:"center"});
+    });
+    return ()=>cancelAnimationFrame(frame);
+  },[state.focusSeq,state.focusId,state.focusKind]);
 
   return <section className={active?"pane activePane":"pane"} onMouseDown={onFocus}>
     <div className="paneHeader">
@@ -345,7 +356,7 @@ function Pane({
 
     <TabList
       selectedValue={state.mode}
-      onTabSelect={(_,data)=>onState({...state,mode:data.value as Mode})}
+      onTabSelect={(_,data)=>onState({...state,mode:data.value as Mode,focusId:undefined,focusKind:undefined})}
       size="small"
       className="modeTabs"
     >
@@ -362,6 +373,7 @@ function Pane({
           reviewState={reviewState}
           onToggleFavorite={onToggleFavorite}
           onOpenRelated={onOpenRelated}
+          focusId={state.focusKind==="pattern"?state.focusId:undefined}
         />
       }
       {state.mode==="apis"&&<Apis tech={tech}/>}
@@ -372,6 +384,7 @@ function Pane({
           reviewState={reviewState}
           onToggleFavorite={onToggleFavorite}
           onOpenRelated={onOpenRelated}
+          focusId={state.focusKind==="pattern"?state.focusId:undefined}
         />
       }
       {state.mode==="practice"&&<Practice tech={tech}/>}
@@ -418,13 +431,15 @@ function Patterns({
   examples=false,
   reviewState,
   onToggleFavorite,
-  onOpenRelated
+  onOpenRelated,
+  focusId
 }:{
   patterns:Pattern[];
   examples?:boolean;
   reviewState:ReviewState;
   onToggleFavorite:(patternId:string)=>void;
-  onOpenRelated:(techId:string)=>void;
+  onOpenRelated:(techId:string,patternId:string)=>void;
+  focusId?:string;
 }){
   return <div className="contentColumn">
     <div>
@@ -438,12 +453,13 @@ function Patterns({
         favorite={!!reviewState[pattern.id]}
         onToggleFavorite={()=>onToggleFavorite(pattern.id)}
         onOpenRelated={onOpenRelated}
+        focused={focusId===pattern.id}
       />
     )}
   </div>;
 }
 
-function Apis({tech}:{tech:Technology}){
+function Apis({tech,focusId}:{tech:Technology;focusId?:string}){
   return <div className="contentColumn">
     <div>
       <div className="sectionEyebrow">API / LIBRARY SURFACE</div>
@@ -451,7 +467,7 @@ function Apis({tech}:{tech:Technology}){
     </div>
     <div className="apiGrid">
       {tech.apis.map(item=>
-        <Card key={item.name} className="apiCard">
+        <Card key={item.name} id={knowledgeDomId("api",tech.id+":"+item.name)} className={focusId===tech.id+":"+item.name?"apiCard knowledgeFocused":"apiCard"}>
           <div className="apiTop"><strong>{item.name}</strong></div>
           <code className="signature">{item.signature}</code>
           <p>{item.whatFor}</p>
