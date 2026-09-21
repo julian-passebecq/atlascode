@@ -76,8 +76,8 @@ export function newUpdatesSince(
   lastVisit?:string
 ):TechnologyUpdate[]{
   if(!validIsoTimestamp(lastVisit)) return entries.slice();
-  const visitedDate=new Date(lastVisit).toISOString().slice(0,10);
-  return entries.filter(entry=>entry.publishedAt>visitedDate);
+  const cutoff=Date.parse(lastVisit);
+  return entries.filter(entry=>Date.parse(entry.curatedAt)>cutoff);
 }
 
 export function latestVersionFor(techId:string){
