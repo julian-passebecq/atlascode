@@ -78,7 +78,7 @@ export function UpdatesCenter({
       <Card className="updatesEmpty">
         <Title3>No curated release notes yet</Title3>
         <p>
-          This technology remains tracked. A future AI refresh can append verified release changes here without rewriting evergreen pattern cards.
+          No verified release entry has been curated for this technology yet. A future refresh can add official release sources without rewriting evergreen pattern cards.
         </p>
       </Card>
     }
@@ -99,7 +99,7 @@ export function UpdatesCenter({
               <Badge appearance="outline">v{entry.version}</Badge>
               <span>{entry.publishedAt}</span>
             </div>
-            <a className="updateSourceLink" href={entry.sourceUrl} target="_blank" rel="noreferrer">
+            <a className="updateSourceLink" href={entry.sourceUrl} target="_blank" rel="noreferrer" aria-label={"Open "+entry.sourceLabel}>
               Official source
             </a>
           </div>
