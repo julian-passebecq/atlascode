@@ -16,6 +16,7 @@ import {
 describe("update feed integrity", () => {
   it("uses unique IDs, valid technologies and official HTTPS sources", () => {
     const ids=new Set<string>();
+    const allowedKinds=new Set(["release","feature","fix","breaking","deprecation","security"]);
     const allowedHosts=new Set([
       "airflow.apache.org",
       "kubernetes.io",
@@ -34,9 +35,12 @@ describe("update feed integrity", () => {
       expect(entry.title.trim()).not.toBe("");
       expect(entry.summary.trim()).not.toBe("");
       expect(entry.impact.trim()).not.toBe("");
+      expect(entry.sourceLabel.trim()).not.toBe("");
+      expect(allowedKinds.has(entry.kind)).toBe(true);
       expect(entry.publishedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       expect(entry.publishedAt<=updatesDocument.reviewedAt).toBe(true);
       expect(Number.isFinite(Date.parse(entry.curatedAt))).toBe(true);
+      expect(entry.curatedAt.slice(0,10)<=updatesDocument.reviewedAt).toBe(true);
 
       const url=new URL(entry.sourceUrl);
       expect(url.protocol).toBe("https:");
