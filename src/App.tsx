@@ -22,6 +22,7 @@ import {
   Star24Filled
 } from "@fluentui/react-icons";
 import { byId, catalog, groups, Mode, Pattern, Technology } from "./content/catalog";
+import { learningTracks, TrackId, trackById } from "./content/tracks";
 import { KnowledgeSearch } from "./components/KnowledgeSearch";
 import { PatternCard } from "./components/PatternCard";
 import { PatternCompare } from "./components/PatternCompare";
@@ -59,6 +60,7 @@ export function App({
   const [activeId,setActiveId]=React.useState(workspaces[0].id);
   const [activePane,setActivePane]=React.useState<PaneKey>("left");
   const [query,setQuery]=React.useState("");
+  const [selectedTrack,setSelectedTrack]=React.useState<TrackId|"all">("all");
   const [compact,setCompact]=React.useState(false);
   const [reviewOpen,setReviewOpen]=React.useState(false);
   const [updatesOpen,setUpdatesOpen]=React.useState(false);
@@ -95,6 +97,9 @@ export function App({
 
   const openSearchResult=(result:SearchResult)=>{
     setQuery("");
+    if(selectedTrack!=="all"&&!byId.get(result.techId)?.tracks.includes(selectedTrack)){
+      setSelectedTrack("all");
+    }
     const focusKind=result.kind==="pattern"?"pattern":result.kind==="api"?"api":result.kind==="update"?"update":undefined;
     openTarget(result.techId,result.mode,focusKind?result.id:undefined,focusKind);
   };
@@ -133,8 +138,13 @@ export function App({
   };
 
   const matchingTechIds=React.useMemo(()=>matchingTechnologyIds(query),[query]);
-  const families=React.useMemo(()=>patternFamilies(),[]);
-  const filtered=catalog.filter(tech=>matchingTechIds.has(tech.id));
+  const trackTechIds=React.useMemo(
+    ()=>new Set(catalog.filter(tech=>selectedTrack==="all"||tech.tracks.includes(selectedTrack)).map(tech=>tech.id)),
+    [selectedTrack]
+  );
+  const families=React.useMemo(()=>patternFamilies(trackTechIds),[trackTechIds]);
+  const filtered=catalog.filter(tech=>matchingTechIds.has(tech.id)&&trackTechIds.has(tech.id));
+  const selectedTrackLabel=selectedTrack==="all"?"All tracks":trackById.get(selectedTrack)?.label||selectedTrack;
 
   return <div className={compact?"app compact":"app"}>
     <header className="topbar">
@@ -242,8 +252,37 @@ export function App({
           <Text weight="semibold">Technology atlas</Text>
         </div>
         <div className="explorerHint">
-          Opens in the {activePane} pane. {filtered.length} technologies.
+          Opens in the {activePane} pane. {filtered.length} technologies in {selectedTrackLabel}.
         </div>
+
+        <section className="trackExplorer" aria-label="Learning tracks">
+          <div className="groupLabel">Learning tracks</div>
+          <div className="trackButtons">
+            <button
+              type="button"
+              className={selectedTrack==="all"?"trackItem selected":"trackItem"}
+              aria-pressed={selectedTrack==="all"}
+              onClick={()=>setSelectedTrack("all")}
+            >
+              <span>All</span>
+              <Badge appearance="outline">{catalog.length}</Badge>
+            </button>
+            {learningTracks.map(track=>{
+              const count=catalog.filter(tech=>tech.tracks.includes(track.id)).length;
+              return <button
+                key={track.id}
+                type="button"
+                className={selectedTrack===track.id?"trackItem selected":"trackItem"}
+                aria-pressed={selectedTrack===track.id}
+                onClick={()=>setSelectedTrack(track.id)}
+                title={track.description}
+              >
+                <span>{track.label}</span>
+                <Badge appearance="outline">{count}</Badge>
+              </button>;
+            })}
+          </div>
+        </section>
 
         {!query.trim()&&<section className="familyExplorer">
           <div className="groupLabel">Pattern families</div>
