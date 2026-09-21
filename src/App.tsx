@@ -22,7 +22,8 @@ import {
   Star24Filled
 } from "@fluentui/react-icons";
 import { byId, catalog, groups, Mode, Pattern, Technology } from "./content/catalog";
-import { learningTracks, TrackId, trackById } from "./content/tracks";
+import { learningTracks, trackById } from "./content/tracks";
+import type { TrackId } from "./content/tracks";
 import { KnowledgeSearch } from "./components/KnowledgeSearch";
 import { PatternCard } from "./components/PatternCard";
 import { PatternCompare } from "./components/PatternCompare";
