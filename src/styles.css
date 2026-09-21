@@ -100,3 +100,9 @@
   .reviewHeaderActions{justify-content:flex-start}
   .sessionCard{padding:14px!important}
 }
+
+
+.familyExplorer{padding:0 7px 4px;border-bottom:1px solid var(--border)}
+.familyButtons{display:flex;flex-direction:column;gap:3px;padding-bottom:7px}
+.familyItem{border:0;background:transparent;color:var(--text);display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 8px;border-radius:5px;text-align:left;cursor:pointer;font-size:12px}
+.familyItem:hover,.familyItem.selected{background:var(--accent-soft);color:var(--accent)}
