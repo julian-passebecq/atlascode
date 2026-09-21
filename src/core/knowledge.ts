@@ -135,18 +135,18 @@ export function patternFamilies(allowedTechIds?:ReadonlySet<string>):PatternFami
     .sort((a,b)=>b.count-a.count || a.title.localeCompare(b.title));
 }
 
-export function patternsForConcept(concept:string):RelatedPattern[] {
+export function patternsForConcept(concept:string,allowedTechIds?:ReadonlySet<string>):RelatedPattern[] {
   if(!concept.trim()) return [];
   return catalog.flatMap(tech =>
-    tech.patterns
+    (!allowedTechIds||allowedTechIds.has(tech.id)) ? tech.patterns
       .filter(pattern=>pattern.concept===concept)
-      .map(pattern=>({techId:tech.id,techName:tech.name,pattern}))
+      .map(pattern=>({techId:tech.id,techName:tech.name,pattern})) : []
   ).sort((a,b)=>a.techName.localeCompare(b.techName));
 }
 
-export function relatedPatterns(pattern:Pattern):RelatedPattern[] {
+export function relatedPatterns(pattern:Pattern,allowedTechIds?:ReadonlySet<string>):RelatedPattern[] {
   if(!pattern.concept) return [];
-  return patternsForConcept(pattern.concept)
+  return patternsForConcept(pattern.concept,allowedTechIds)
     .filter(item=>item.pattern.id!==pattern.id);
 }
 
