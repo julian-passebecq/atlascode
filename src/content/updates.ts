@@ -6,6 +6,7 @@ export type TechnologyUpdate = {
   techId:string;
   version:string;
   publishedAt:string;
+  curatedAt:string;
   kind:UpdateKind;
   title:string;
   summary:string;
