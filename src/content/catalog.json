@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "contentVersion": "0.3.1",
+  "contentVersion": "0.4.0",
   "reviewedAt": "2026-09-21",
   "technologies": [
     {
@@ -137,6 +137,34 @@
             "sort"
           ],
           "concept": "latest-row"
+        },
+        {
+          "id": "pd-anti-join",
+          "title": "Keep rows missing from the other table",
+          "language": "python",
+          "code": "missing = (\n    source.merge(target[[\"id\"]], on=\"id\", how=\"left\", indicator=True)\n    .loc[lambda d: d[\"_merge\"].eq(\"left_only\")]\n    .drop(columns=\"_merge\")\n)",
+          "why": "A left merge with an indicator makes unmatched rows explicit and debuggable.",
+          "remember": "Pandas anti-join = left merge + indicator + left_only.",
+          "tags": [
+            "join",
+            "anti-join",
+            "merge"
+          ],
+          "concept": "anti-join"
+        },
+        {
+          "id": "pd-group-agg",
+          "title": "Named grouped aggregation",
+          "language": "python",
+          "code": "summary = (\n    orders.groupby(\"customer_id\", as_index=False)\n    .agg(\n        order_count=(\"order_id\", \"size\"),\n        revenue=(\"amount\", \"sum\"),\n    )\n)",
+          "why": "Named aggregation keeps output column names close to their source and aggregation function.",
+          "remember": "Pandas grain = groupby keys; use named agg for readable outputs.",
+          "tags": [
+            "groupby",
+            "aggregation",
+            "grain"
+          ],
+          "concept": "grouped-aggregation"
         }
       ],
       "apis": [
@@ -223,6 +251,33 @@
             "sort"
           ],
           "concept": "latest-row"
+        },
+        {
+          "id": "pl-anti-join",
+          "title": "Anti-join directly",
+          "language": "python",
+          "code": "missing = source.join(\n    target.select(\"id\"),\n    on=\"id\",\n    how=\"anti\",\n)",
+          "why": "Polars exposes anti join as a first-class join strategy.",
+          "remember": "Use how='anti' when you only need left rows with no match.",
+          "tags": [
+            "join",
+            "anti-join"
+          ],
+          "concept": "anti-join"
+        },
+        {
+          "id": "pl-group-agg",
+          "title": "Expression grouped aggregation",
+          "language": "python",
+          "code": "summary = (\n    orders.group_by(\"customer_id\")\n    .agg(\n        pl.len().alias(\"order_count\"),\n        pl.col(\"amount\").sum().alias(\"revenue\"),\n    )\n)",
+          "why": "Polars keeps aggregation logic as optimized expressions.",
+          "remember": "Polars grain = group_by keys; every agg expression returns one value per group.",
+          "tags": [
+            "group-by",
+            "aggregation",
+            "expressions"
+          ],
+          "concept": "grouped-aggregation"
         }
       ],
       "apis": [
@@ -369,6 +424,34 @@
             "functions",
             "udf"
           ]
+        },
+        {
+          "id": "pyspark-anti-join",
+          "title": "Left anti join",
+          "language": "python",
+          "code": "missing = source.join(\n    target.select(\"id\"),\n    on=\"id\",\n    how=\"left_anti\",\n)",
+          "why": "Spark's left_anti join avoids carrying right-side columns when you only need non-matches.",
+          "remember": "PySpark anti-join = how='left_anti'.",
+          "tags": [
+            "join",
+            "anti-join",
+            "spark"
+          ],
+          "concept": "anti-join"
+        },
+        {
+          "id": "pyspark-group-agg",
+          "title": "Distributed grouped aggregation",
+          "language": "python",
+          "code": "summary = (\n    orders.groupBy(\"customer_id\")\n    .agg(\n        F.count(\"*\").alias(\"order_count\"),\n        F.sum(\"amount\").alias(\"revenue\"),\n    )\n)",
+          "why": "groupBy changes the physical data distribution and usually introduces a shuffle.",
+          "remember": "In Spark, GROUP BY is a wide operation: reason about grain and shuffle together.",
+          "tags": [
+            "groupby",
+            "aggregation",
+            "shuffle"
+          ],
+          "concept": "grouped-aggregation"
         }
       ],
       "apis": [
@@ -572,7 +655,22 @@
           "tags": [
             "join",
             "set"
-          ]
+          ],
+          "concept": "anti-join"
+        },
+        {
+          "id": "sql-group-agg",
+          "title": "Grouped aggregation",
+          "language": "sql",
+          "code": "select\n  customer_id,\n  count(*) as order_count,\n  sum(amount) as revenue\nfrom orders\ngroup by customer_id;",
+          "why": "Aggregate at the required business grain and name each derived measure explicitly.",
+          "remember": "The GROUP BY columns define the output grain.",
+          "tags": [
+            "group-by",
+            "aggregation",
+            "grain"
+          ],
+          "concept": "grouped-aggregation"
         }
       ],
       "apis": [
@@ -634,6 +732,34 @@
             "olap"
           ],
           "concept": "lazy-file-scan"
+        },
+        {
+          "id": "duckdb-anti-join",
+          "title": "Anti-join with NOT EXISTS",
+          "language": "sql",
+          "code": "select s.*\nfrom source_rows s\nwhere not exists (\n  select 1\n  from target_rows t\n  where t.id = s.id\n);",
+          "why": "NOT EXISTS is a clear null-safe anti-join idiom in SQL engines including DuckDB.",
+          "remember": "Use NOT EXISTS when the question is 'which left rows have no right match?'.",
+          "tags": [
+            "join",
+            "anti-join",
+            "not-exists"
+          ],
+          "concept": "anti-join"
+        },
+        {
+          "id": "duckdb-group-agg",
+          "title": "Aggregate files at business grain",
+          "language": "sql",
+          "code": "select\n  customer_id,\n  count(*) as order_count,\n  sum(amount) as revenue\nfrom read_parquet('orders/*.parquet')\ngroup by customer_id;",
+          "why": "DuckDB can aggregate directly over files without a separate ingestion step.",
+          "remember": "Push projection/filtering into the file scan, then aggregate at the required grain.",
+          "tags": [
+            "group-by",
+            "aggregation",
+            "parquet"
+          ],
+          "concept": "grouped-aggregation"
         }
       ],
       "apis": [
@@ -693,7 +819,8 @@
           "tags": [
             "merge",
             "cdc"
-          ]
+          ],
+          "concept": "upsert-by-key"
         }
       ],
       "apis": [
@@ -756,6 +883,20 @@
             "latest"
           ],
           "concept": "latest-row"
+        },
+        {
+          "id": "bigquery-merge-upsert",
+          "title": "Upsert with MERGE",
+          "language": "sql",
+          "code": "merge `analytics.customers` t\nusing staging_customers s\non t.customer_id = s.customer_id\nwhen matched and s.updated_at > t.updated_at then\n  update set name = s.name, updated_at = s.updated_at\nwhen not matched then\n  insert (customer_id, name, updated_at)\n  values (s.customer_id, s.name, s.updated_at);",
+          "why": "MERGE expresses insert/update logic in one atomic warehouse statement.",
+          "remember": "Match on the stable business key and guard updates with ordering when source events can arrive late.",
+          "tags": [
+            "merge",
+            "upsert",
+            "cdc"
+          ],
+          "concept": "upsert-by-key"
         }
       ],
       "apis": [
@@ -812,6 +953,20 @@
             "latest"
           ],
           "concept": "latest-row"
+        },
+        {
+          "id": "snowflake-merge-upsert",
+          "title": "Upsert with MERGE",
+          "language": "sql",
+          "code": "merge into analytics.customers t\nusing staging_customers s\non t.customer_id = s.customer_id\nwhen matched and s.updated_at > t.updated_at then\n  update set name = s.name, updated_at = s.updated_at\nwhen not matched then\n  insert (customer_id, name, updated_at)\n  values (s.customer_id, s.name, s.updated_at);",
+          "why": "Snowflake MERGE handles matched and unmatched rows in a single statement.",
+          "remember": "Deduplicate the source before MERGE when multiple source rows can target the same key.",
+          "tags": [
+            "merge",
+            "upsert",
+            "cdc"
+          ],
+          "concept": "upsert-by-key"
         }
       ],
       "apis": [
@@ -924,6 +1079,20 @@
             "postgres"
           ],
           "concept": "latest-row"
+        },
+        {
+          "id": "postgres-upsert",
+          "title": "Upsert with ON CONFLICT",
+          "language": "sql",
+          "code": "insert into customers (customer_id, name, updated_at)\nvalues ($1, $2, $3)\non conflict (customer_id) do update\nset name = excluded.name,\n    updated_at = excluded.updated_at\nwhere excluded.updated_at > customers.updated_at;",
+          "why": "PostgreSQL ON CONFLICT is the canonical insert-or-update shape for a unique key.",
+          "remember": "The conflict target must be backed by a unique constraint/index.",
+          "tags": [
+            "upsert",
+            "on-conflict",
+            "cdc"
+          ],
+          "concept": "upsert-by-key"
         }
       ],
       "apis": [
