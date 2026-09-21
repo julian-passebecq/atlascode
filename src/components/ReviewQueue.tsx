@@ -10,7 +10,7 @@ export function ReviewQueue({
   onRemove
 }:{
   state:ReviewState;
-  onOpen:(techId:string)=>void;
+  onOpen:(techId:string,patternId:string)=>void;
   onReviewed:(patternId:string)=>void;
   onRemove:(patternId:string)=>void;
 }){
@@ -56,7 +56,7 @@ export function ReviewQueue({
             </div>
             <div className="reviewActions">
               <Button appearance="primary" onClick={()=>onReviewed(pattern.id)}>Mark reviewed</Button>
-              <Button appearance="secondary" onClick={()=>onOpen(tech.id)}>Open</Button>
+              <Button appearance="secondary" onClick={()=>onOpen(tech.id,pattern.id)}>Open</Button>
               <Button appearance="subtle" onClick={()=>onRemove(pattern.id)}>Remove</Button>
             </div>
           </div>
