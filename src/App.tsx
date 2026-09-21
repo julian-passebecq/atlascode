@@ -26,7 +26,7 @@ import { KnowledgeSearch } from "./components/KnowledgeSearch";
 import { PatternCard } from "./components/PatternCard";
 import { PatternCompare } from "./components/PatternCompare";
 import { ReviewQueue } from "./components/ReviewQueue";
-import { knowledgeDomId, matchingTechnologyIds, SearchResult } from "./core/knowledge";
+import { knowledgeDomId, matchingTechnologyIds, patternFamilies, SearchResult } from "./core/knowledge";
 import {
   loadReviewState,
   markReviewed,
@@ -121,6 +121,7 @@ export function App({
   };
 
   const matchingTechIds=React.useMemo(()=>matchingTechnologyIds(query),[query]);
+  const families=React.useMemo(()=>patternFamilies(),[]);
   const filtered=catalog.filter(tech=>matchingTechIds.has(tech.id));
 
   return <div className={compact?"app compact":"app"}>
@@ -219,6 +220,22 @@ export function App({
         <div className="explorerHint">
           Opens in the {activePane} pane. {filtered.length} technologies.
         </div>
+
+        {!query.trim()&&<section className="familyExplorer">
+          <div className="groupLabel">Pattern families</div>
+          <div className="familyButtons">
+            {families.map(family=>
+              <button
+                key={family.concept}
+                className={compareConcept===family.concept?"familyItem selected":"familyItem"}
+                onClick={()=>{setReviewOpen(false);setCompareConcept(family.concept);}}
+              >
+                <span>{family.title}</span>
+                <Badge appearance="outline">{family.count}</Badge>
+              </button>
+            )}
+          </div>
+        </section>}
 
         <nav className="techTree">
           {groups.map(group=>{
