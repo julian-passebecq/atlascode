@@ -5,6 +5,38 @@ export type PaneKey = "left" | "right";
 export function visiblePaneKey(split:boolean,pane:PaneKey):PaneKey{
   return split?pane:"left";
 }
+
+export function scopeWorkspaceToTechnologies(
+  workspace:Workspace,
+  allowedTechIds:ReadonlySet<string>,
+  defaultTechId:string
+):Workspace{
+  if(!allowedTechIds.size) return workspace;
+
+  const candidates=[...allowedTechIds].filter(techId=>byId.has(techId));
+  if(!candidates.length) return workspace;
+
+  const fallback=allowedTechIds.has(defaultTechId)&&byId.has(defaultTechId)
+    ? defaultTechId
+    : candidates[0];
+
+  const normalizePane=(pane:PaneState,avoidTechId?:string):PaneState=>{
+    if(allowedTechIds.has(pane.techId)) return pane;
+    const techId=candidates.find(candidate=>candidate!==avoidTechId) || fallback;
+    return {
+      techId,
+      mode:pane.mode,
+      focusId:undefined,
+      focusKind:undefined,
+      focusSeq:undefined
+    };
+  };
+
+  const left=normalizePane(workspace.left);
+  const right=normalizePane(workspace.right,left.techId);
+  const next={...workspace,left,right};
+  return {...next,title:workspaceTitle(next)};
+}
 export type PaneState = {
   techId:string;
   mode:Mode;
