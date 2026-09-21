@@ -57,7 +57,7 @@ export function recordGlobalUpdateVisit(
   now=new Date().toISOString()
 ):UpdateVisitState{
   if(!validIsoTimestamp(now)) return state;
-  const next={...state,[GLOBAL_SCOPE]:now};
+  const next:UpdateVisitState={...state,[GLOBAL_SCOPE]:now};
   for(const techId of new Set(updates.map(entry=>entry.techId))){
     next[techId]=now;
   }
