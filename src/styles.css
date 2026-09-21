@@ -140,3 +140,10 @@
   .releaseImpact{grid-template-columns:1fr}
   .workspaceTools{max-width:52vw}
 }
+
+
+.trackExplorer{padding:0 7px 7px;border-bottom:1px solid var(--border)}
+.trackButtons{display:grid;grid-template-columns:1fr;gap:3px;padding-bottom:2px}
+.trackItem{border:0;background:transparent;color:var(--text);display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 8px;border-radius:5px;text-align:left;cursor:pointer;font-size:12px}
+.trackItem:hover,.trackItem.selected{background:var(--accent-soft);color:var(--accent)}
+.trackItem span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
