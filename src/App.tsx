@@ -29,7 +29,7 @@ import { PatternCard } from "./components/PatternCard";
 import { PatternCompare } from "./components/PatternCompare";
 import { ReviewQueue } from "./components/ReviewQueue";
 import { UpdatesCenter } from "./components/UpdatesCenter";
-import { knowledgeDomId, matchingTechnologyIds, patternFamilies, SearchResult, technologyIdsForTrack } from "./core/knowledge";
+import { knowledgeDomId, matchingTechnologyIds, patternFamilies, SearchResult, technologyIdsForTrack, trackScopeForTechnology } from "./core/knowledge";
 import {
   loadReviewState,
   markReviewed,
@@ -85,6 +85,7 @@ export function App({
   };
 
   const openTarget=(techId:string,mode?:Mode,focusId?:string,focusKind?:"pattern"|"api"|"update")=>{
+    setSelectedTrack(track=>trackScopeForTechnology(track,techId));
     setReviewOpen(false);
     setUpdatesOpen(false);
     setCompareConcept(undefined);
@@ -98,9 +99,6 @@ export function App({
 
   const openSearchResult=(result:SearchResult)=>{
     setQuery("");
-    if(selectedTrack!=="all"&&!byId.get(result.techId)?.tracks.includes(selectedTrack)){
-      setSelectedTrack("all");
-    }
     const focusKind=result.kind==="pattern"?"pattern":result.kind==="api"?"api":result.kind==="update"?"update":undefined;
     openTarget(result.techId,result.mode,focusKind?result.id:undefined,focusKind);
   };
