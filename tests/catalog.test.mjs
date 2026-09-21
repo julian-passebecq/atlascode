@@ -99,13 +99,17 @@ test("cross-technology concepts are comparable", () => {
   }
 
   for (const [concept, refs] of byConcept) {
-    assert.ok(refs.length >= 2, "concept needs at least two comparable patterns: " + concept);
+    assert.ok(new Set(refs.map(item => item.techId)).size >= 2, "concept needs at least two technologies: " + concept);
   }
 });
 
 
 test("placeholder learning content does not regress", () => {
   for (const tech of catalog.technologies) {
+    assert.ok(
+      tech.patterns.every(pattern => !pattern.id.endsWith("-core")),
+      tech.id + " still contains placeholder core pattern content"
+    );
     assert.ok(
       tech.apis.every(api => api.name !== "Core surface"),
       tech.id + " still contains placeholder API content"
