@@ -66,9 +66,34 @@ function makeWorkspace(id:string=crypto.randomUUID(),techId:string="python"):Wor
 function loadWorkspaces():Workspace[]{
   try{
     const parsed=JSON.parse(localStorage.getItem("atlascode.workspaces")||"[]");
-    if(Array.isArray(parsed)&&parsed.length) return parsed;
-  }catch{}
-  return [makeWorkspace("starter","python")];
+    if(!Array.isArray(parsed)||!parsed.length) return [makeWorkspace("starter","python")];
+    const valid=parsed.filter((workspace):workspace is Workspace=>{
+      if(!workspace||typeof workspace!=="object") return false;
+      const candidate=workspace as Partial<Workspace>;
+      return typeof candidate.id==="string"
+        && typeof candidate.title==="string"
+        && typeof candidate.split==="boolean"
+        && !!candidate.left
+        && !!candidate.right
+        && typeof candidate.left.techId==="string"
+        && typeof candidate.left.mode==="string"
+        && typeof candidate.right.techId==="string"
+        && typeof candidate.right.mode==="string"
+        && byId.has(candidate.left.techId)
+        && byId.has(candidate.right.techId);
+    });
+    return valid.length?valid:[makeWorkspace("starter","python")];
+  }catch{
+    return [makeWorkspace("starter","python")];
+  }
+}
+
+function saveWorkspaces(workspaces:Workspace[]){
+  try{
+    localStorage.setItem("atlascode.workspaces",JSON.stringify(workspaces));
+  }catch{
+    // Workspace persistence is best-effort; the active session must remain usable.
+  }
 }
 
 export function App({
@@ -90,7 +115,7 @@ export function App({
   const active=workspaces.find(workspace=>workspace.id===activeId)||workspaces[0];
 
   React.useEffect(()=>{
-    localStorage.setItem("atlascode.workspaces",JSON.stringify(workspaces));
+    saveWorkspaces(workspaces);
   },[workspaces]);
 
   React.useEffect(()=>{
@@ -376,7 +401,7 @@ function Pane({
           focusId={state.focusKind==="pattern"?state.focusId:undefined}
         />
       }
-      {state.mode==="apis"&&<Apis tech={tech}/>}
+      {state.mode==="apis"&&<Apis tech={tech} focusId={state.focusKind==="api"?state.focusId:undefined}/>}
       {state.mode==="examples"&&
         <Patterns
           patterns={tech.patterns.slice(0,2)}
