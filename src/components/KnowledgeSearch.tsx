@@ -11,8 +11,8 @@ export function KnowledgeSearch({
   const results=searchKnowledge(query);
   if(!query.trim()) return null;
 
-  return <div className="searchResults" role="listbox" aria-label="Knowledge search results">
-    <div className="searchSummary">
+  return <div className="searchResults" role="region" aria-label="Knowledge search results">
+    <div className="searchSummary" aria-live="polite">
       <Text size={200}>{results.length?results.length+" direct matches":"No direct matches"}</Text>
     </div>
     {results.map(result=>
