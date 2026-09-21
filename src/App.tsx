@@ -424,7 +424,7 @@ function Pane({
         />
       }
       {state.mode==="practice"&&<Practice tech={tech}/>}
-      {state.mode==="updates"&&<UpdatesCenter techId={tech.id} focusId={state.focusKind==="update"?state.focusId:undefined} onOpenPattern={onOpenRelated}/>}
+      {state.mode==="updates"&&<UpdatesCenter key={tech.id} techId={tech.id} focusId={state.focusKind==="update"?state.focusId:undefined} onOpenPattern={onOpenRelated}/>}
     </div>
   </section>;
 }
