@@ -33,6 +33,18 @@ describe("searchKnowledge", () => {
     expect(results.some(result=>result.techId==="excel" && result.kind==="api")).toBe(true);
   });
 
+  it("finds version updates and routes them to What's New", () => {
+    const airflow=searchKnowledge("3.3.2", 10);
+    expect(airflow.some(result =>
+      result.kind==="update" &&
+      result.techId==="airflow" &&
+      result.mode==="updates"
+    )).toBe(true);
+
+    const docker=searchKnowledge("29.8.1", 10);
+    expect(docker.some(result=>result.kind==="update" && result.techId==="docker")).toBe(true);
+  });
+
   it("ranks exact technology matches strongly", () => {
     const [first]=searchKnowledge("pandas", 5);
     expect(first?.kind).toBe("technology");
@@ -44,6 +56,7 @@ describe("matchingTechnologyIds", () => {
   it("keeps explorer filtering consistent with API and code-term search", () => {
     expect(matchingTechnologyIds("XLOOKUP").has("excel")).toBe(true);
     expect(matchingTechnologyIds("F.broadcast").has("spark")).toBe(true);
+    expect(matchingTechnologyIds("3.3.2").has("airflow")).toBe(true);
     expect(matchingTechnologyIds("definitely-no-match").size).toBe(0);
   });
 
@@ -108,6 +121,9 @@ describe("knowledge helpers", () => {
   it("creates stable DOM-safe anchor IDs", () => {
     expect(knowledgeDomId("api","excel:XLOOKUP value")).toBe(
       "knowledge-api-excel%3AXLOOKUP%20value"
+    );
+    expect(knowledgeDomId("update","airflow:3.3.2")).toBe(
+      "knowledge-update-airflow%3A3.3.2"
     );
   });
 });
