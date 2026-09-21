@@ -1,6 +1,10 @@
 import { byId, Mode } from "../content/catalog";
 
 export type PaneKey = "left" | "right";
+
+export function visiblePaneKey(split:boolean,pane:PaneKey):PaneKey{
+  return split?pane:"left";
+}
 export type PaneState = {
   techId:string;
   mode:Mode;
