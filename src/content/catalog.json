@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 1,
-  "contentVersion": "0.2.1",
+  "schemaVersion": 2,
+  "contentVersion": "0.3.0",
   "reviewedAt": "2026-09-21",
   "technologies": [
     {
@@ -37,7 +37,8 @@
           "tags": [
             "dict",
             "algorithm"
-          ]
+          ],
+          "concept": "keyed-lookup"
         },
         {
           "id": "py-generator",
@@ -121,7 +122,22 @@
           "tags": [
             "merge",
             "quality"
-          ]
+          ],
+          "concept": "join-cardinality"
+        },
+        {
+          "id": "pd-latest-row",
+          "title": "Latest row per business key",
+          "language": "python",
+          "code": "latest = (\n    events\n    .sort_values([\"customer_id\", \"updated_at\"])\n    .drop_duplicates(\"customer_id\", keep=\"last\")\n)",
+          "why": "Sort explicitly, then keep one deterministic winner per key.",
+          "remember": "In Pandas, latest-row logic is usually sort_values + drop_duplicates.",
+          "tags": [
+            "dedupe",
+            "latest",
+            "sort"
+          ],
+          "concept": "latest-row"
         }
       ],
       "apis": [
@@ -192,7 +208,22 @@
           "tags": [
             "lazy",
             "parquet"
-          ]
+          ],
+          "concept": "lazy-file-scan"
+        },
+        {
+          "id": "pl-latest-row",
+          "title": "Latest row per business key",
+          "language": "python",
+          "code": "latest = (\n    df\n    .sort([\"customer_id\", \"updated_at\"])\n    .unique(subset=[\"customer_id\"], keep=\"last\")\n)",
+          "why": "Ordered unique selection expresses a compact top-one-per-key pattern.",
+          "remember": "Sort by the tie-breaker first, then unique on the business key.",
+          "tags": [
+            "dedupe",
+            "latest",
+            "sort"
+          ],
+          "concept": "latest-row"
         }
       ],
       "apis": [
@@ -252,7 +283,8 @@
           "tags": [
             "window",
             "dedupe"
-          ]
+          ],
+          "concept": "latest-row"
         },
         {
           "id": "spark-broadcast",
@@ -264,7 +296,8 @@
           "tags": [
             "join",
             "broadcast"
-          ]
+          ],
+          "concept": "lookup-join"
         }
       ],
       "apis": [
@@ -324,7 +357,8 @@
           "tags": [
             "window",
             "dedupe"
-          ]
+          ],
+          "concept": "latest-row"
         },
         {
           "id": "pyspark-builtins",
@@ -467,7 +501,8 @@
           "remember": "Incremental logic must remain correct on a full refresh.",
           "tags": [
             "incremental"
-          ]
+          ],
+          "concept": "incremental-load"
         }
       ],
       "apis": [
@@ -527,7 +562,8 @@
           "tags": [
             "window",
             "dedupe"
-          ]
+          ],
+          "concept": "latest-row"
         },
         {
           "id": "sql-anti",
@@ -539,7 +575,8 @@
           "tags": [
             "join",
             "set"
-          ]
+          ],
+          "concept": "anti-join"
         }
       ],
       "apis": [
@@ -599,7 +636,8 @@
           "tags": [
             "parquet",
             "olap"
-          ]
+          ],
+          "concept": "lazy-file-scan"
         }
       ],
       "apis": [
@@ -659,7 +697,8 @@
           "tags": [
             "merge",
             "cdc"
-          ]
+          ],
+          "concept": "cdc-upsert"
         }
       ],
       "apis": [
@@ -710,15 +749,18 @@
       ],
       "patterns": [
         {
-          "id": "bigquery-core",
-          "title": "BigQuery core pattern",
-          "language": "text",
-          "code": "QUALIFY, UNNEST, SAFE_CAST, partition pruning",
-          "why": "A compact recognition card for BigQuery.",
-          "remember": "Use this page as a launch point; AI refreshes can expand it into deeper version-aware patterns.",
+          "id": "bigquery-latest-row",
+          "title": "Latest row with QUALIFY",
+          "language": "sql",
+          "code": "select customer_id, status, updated_at\nfrom `analytics.customer_status`\nqualify row_number() over (\n  partition by customer_id\n  order by updated_at desc\n) = 1;",
+          "why": "QUALIFY filters window results without wrapping the query in another CTE.",
+          "remember": "BigQuery latest-row = ROW_NUMBER + QUALIFY.",
           "tags": [
-            "core"
-          ]
+            "qualify",
+            "window",
+            "latest"
+          ],
+          "concept": "latest-row"
         }
       ],
       "apis": [
@@ -763,15 +805,18 @@
       ],
       "patterns": [
         {
-          "id": "snowflake-core",
-          "title": "Snowflake core pattern",
-          "language": "text",
-          "code": "QUALIFY, VARIANT, FLATTEN, TRY_CAST",
-          "why": "A compact recognition card for Snowflake.",
-          "remember": "Use this page as a launch point; AI refreshes can expand it into deeper version-aware patterns.",
+          "id": "snowflake-latest-row",
+          "title": "Latest row with QUALIFY",
+          "language": "sql",
+          "code": "select customer_id, status, updated_at\nfrom analytics.customer_status\nqualify row_number() over (\n  partition by customer_id\n  order by updated_at desc\n) = 1;",
+          "why": "Snowflake QUALIFY applies after analytical windows and keeps the query flat.",
+          "remember": "Snowflake and BigQuery share the same QUALIFY mental model.",
           "tags": [
-            "core"
-          ]
+            "qualify",
+            "window",
+            "latest"
+          ],
+          "concept": "latest-row"
         }
       ],
       "apis": [
@@ -816,15 +861,18 @@
       ],
       "patterns": [
         {
-          "id": "tsql-core",
-          "title": "T-SQL core pattern",
-          "language": "text",
-          "code": "TOP, APPLY, temp tables, TRY_CONVERT",
-          "why": "A compact recognition card for T-SQL.",
-          "remember": "Use this page as a launch point; AI refreshes can expand it into deeper version-aware patterns.",
+          "id": "tsql-latest-row",
+          "title": "Latest child row with OUTER APPLY",
+          "language": "sql",
+          "code": "select c.customer_id, x.status, x.updated_at\nfrom dbo.customer c\nouter apply (\n  select top (1) s.status, s.updated_at\n  from dbo.customer_status s\n  where s.customer_id = c.customer_id\n  order by s.updated_at desc\n) x;",
+          "why": "OUTER APPLY is a useful SQL Server-specific top-one-per-parent shape.",
+          "remember": "Use OUTER APPLY when you want the parent preserved even without a child row.",
           "tags": [
-            "core"
-          ]
+            "apply",
+            "top",
+            "latest"
+          ],
+          "concept": "latest-row"
         }
       ],
       "apis": [
@@ -869,15 +917,18 @@
       ],
       "patterns": [
         {
-          "id": "postgres-core",
-          "title": "PostgreSQL core pattern",
-          "language": "text",
-          "code": "ON CONFLICT, DISTINCT ON, JSONB, EXPLAIN ANALYZE",
-          "why": "A compact recognition card for PostgreSQL.",
-          "remember": "Use this page as a launch point; AI refreshes can expand it into deeper version-aware patterns.",
+          "id": "postgres-latest-row",
+          "title": "Latest row with DISTINCT ON",
+          "language": "sql",
+          "code": "select distinct on (customer_id)\n  customer_id, status, updated_at\nfrom customer_status\norder by customer_id, updated_at desc;",
+          "why": "PostgreSQL DISTINCT ON is a concise top-one-per-group idiom.",
+          "remember": "ORDER BY must start with the DISTINCT ON key, then define the winner.",
           "tags": [
-            "core"
-          ]
+            "distinct-on",
+            "latest",
+            "postgres"
+          ],
+          "concept": "latest-row"
         }
       ],
       "apis": [
@@ -922,15 +973,18 @@
       ],
       "patterns": [
         {
-          "id": "mysql-core",
-          "title": "MySQL core pattern",
-          "language": "text",
-          "code": "ON DUPLICATE KEY, JSON_EXTRACT, window functions",
-          "why": "A compact recognition card for MySQL.",
-          "remember": "Use this page as a launch point; AI refreshes can expand it into deeper version-aware patterns.",
+          "id": "mysql-latest-row",
+          "title": "Latest row with ROW_NUMBER",
+          "language": "sql",
+          "code": "with ranked as (\n  select s.*,\n    row_number() over (\n      partition by customer_id\n      order by updated_at desc\n    ) as rn\n  from customer_status s\n)\nselect * from ranked where rn = 1;",
+          "why": "Window ranking keeps all columns from the winning record.",
+          "remember": "Use ROW_NUMBER when you need the complete latest row, not only MAX(timestamp).",
           "tags": [
-            "core"
-          ]
+            "window",
+            "latest",
+            "mysql"
+          ],
+          "concept": "latest-row"
         }
       ],
       "apis": [
@@ -1093,7 +1147,8 @@
           "remember": "Use this page as a launch point; AI refreshes can expand it into deeper version-aware patterns.",
           "tags": [
             "core"
-          ]
+          ],
+          "concept": "pipeline-filter"
         }
       ],
       "apis": [
@@ -1146,7 +1201,8 @@
           "remember": "Use this page as a launch point; AI refreshes can expand it into deeper version-aware patterns.",
           "tags": [
             "core"
-          ]
+          ],
+          "concept": "pipeline-filter"
         }
       ],
       "apis": [
@@ -1252,7 +1308,8 @@
           "remember": "Use this page as a launch point; AI refreshes can expand it into deeper version-aware patterns.",
           "tags": [
             "core"
-          ]
+          ],
+          "concept": "keyed-lookup"
         }
       ],
       "apis": [
