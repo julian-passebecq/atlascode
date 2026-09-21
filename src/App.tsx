@@ -26,6 +26,7 @@ import { KnowledgeSearch } from "./components/KnowledgeSearch";
 import { PatternCard } from "./components/PatternCard";
 import { PatternCompare } from "./components/PatternCompare";
 import { ReviewQueue } from "./components/ReviewQueue";
+import { UpdatesCenter } from "./components/UpdatesCenter";
 import { knowledgeDomId, matchingTechnologyIds, patternFamilies, SearchResult } from "./core/knowledge";
 import {
   loadReviewState,
@@ -59,6 +60,7 @@ export function App({
   const [query,setQuery]=React.useState("");
   const [compact,setCompact]=React.useState(false);
   const [reviewOpen,setReviewOpen]=React.useState(false);
+  const [updatesOpen,setUpdatesOpen]=React.useState(false);
   const [compareConcept,setCompareConcept]=React.useState<string>();
   const validPatternIds=React.useMemo(()=>new Set(catalog.flatMap(tech=>tech.patterns.map(pattern=>pattern.id))),[]);
   const [reviewState,setReviewState]=React.useState<ReviewState>(()=>pruneReviewState(loadReviewState(),validPatternIds));
@@ -80,6 +82,7 @@ export function App({
 
   const openTarget=(techId:string,mode?:Mode,focusId?:string,focusKind?:"pattern"|"api")=>{
     setReviewOpen(false);
+    setUpdatesOpen(false);
     setCompareConcept(undefined);
     const nextFocusSeq=++focusSeq.current;
     mutate(workspace=>{
@@ -101,6 +104,7 @@ export function App({
     setActiveId(next.id);
     setActivePane("left");
     setReviewOpen(false);
+    setUpdatesOpen(false);
     setCompareConcept(undefined);
   };
 
@@ -167,6 +171,8 @@ export function App({
                 setActiveId(workspace.id);
                 setActivePane("left");
                 setReviewOpen(false);
+                setUpdatesOpen(false);
+                setCompareConcept(undefined);
               }}
             >
               <span>{workspace.title}</span>
@@ -193,9 +199,16 @@ export function App({
           appearance={reviewOpen?"primary":"subtle"}
           aria-pressed={reviewOpen}
           icon={<Star24Filled/>}
-          onClick={()=>{setCompareConcept(undefined);setReviewOpen(value=>!value);}}
+          onClick={()=>{setCompareConcept(undefined);setUpdatesOpen(false);setReviewOpen(value=>!value);}}
         >
           Review {Object.keys(reviewState).length}
+        </Button>
+        <Button
+          appearance={updatesOpen?"primary":"subtle"}
+          aria-pressed={updatesOpen}
+          onClick={()=>{setCompareConcept(undefined);setReviewOpen(false);setUpdatesOpen(value=>!value);}}
+        >
+          Updates
         </Button>
         <Button
           appearance={active.split?"primary":"subtle"}
@@ -228,7 +241,7 @@ export function App({
               <button
                 key={family.concept}
                 className={compareConcept===family.concept?"familyItem selected":"familyItem"}
-                onClick={()=>{setReviewOpen(false);setCompareConcept(family.concept);}}
+                onClick={()=>{setReviewOpen(false);setUpdatesOpen(false);setCompareConcept(family.concept);}}
               >
                 <span>{family.title}</span>
                 <Badge appearance="outline">{family.count}</Badge>
@@ -271,6 +284,13 @@ export function App({
           />
         </main>
         :
+        updatesOpen?
+        <main className="reader updatesReader">
+          <UpdatesCenter
+            onOpenPattern={(techId,patternId)=>openTarget(techId,"patterns",patternId,"pattern")}
+          />
+        </main>
+        :
         reviewOpen?
         <main className="reader reviewReader">
           <ReviewQueue
@@ -293,7 +313,7 @@ export function App({
             reviewState={reviewState}
             onToggleFavorite={toggleFavorite}
             onOpenRelated={(techId,patternId)=>openTarget(techId,"patterns",patternId,"pattern")}
-            onCompareConcept={concept=>{setReviewOpen(false);setCompareConcept(concept);}}
+            onCompareConcept={concept=>{setReviewOpen(false);setUpdatesOpen(false);setCompareConcept(concept);}}
           />
           {active.split&&
             <Pane
@@ -307,7 +327,7 @@ export function App({
               reviewState={reviewState}
               onToggleFavorite={toggleFavorite}
               onOpenRelated={(techId,patternId)=>openTarget(techId,"patterns",patternId,"pattern")}
-              onCompareConcept={concept=>{setReviewOpen(false);setCompareConcept(concept);}}
+              onCompareConcept={concept=>{setReviewOpen(false);setUpdatesOpen(false);setCompareConcept(concept);}}
             />
           }
         </main>
@@ -393,7 +413,7 @@ function Pane({
         />
       }
       {state.mode==="practice"&&<Practice tech={tech}/>}
-      {state.mode==="updates"&&<Updates tech={tech}/>}
+      {state.mode==="updates"&&<UpdatesCenter techId={tech.id} onOpenPattern={onOpenRelated}/>}
     </div>
   </section>;
 }
@@ -518,30 +538,3 @@ function PracticeCard({item}:{item:Technology["practices"][number]}){
   </Card>;
 }
 
-function Updates({tech}:{tech:Technology}){
-  return <div className="contentColumn">
-    <div>
-      <div className="sectionEyebrow">VERSION-AWARE</div>
-      <Title3>What’s new</Title3>
-      <Text className="muted">
-        Evergreen syntax stays in Memo and Patterns; version-sensitive AI refreshes land here.
-      </Text>
-    </div>
-    <Card className="updateCard">
-      <div className="updateMeta">
-        <Badge appearance="filled">AI sync</Badge>
-        <span>2026-09-21</span>
-        <span>tracking</span>
-      </div>
-      <strong>{tech.name} release watch enabled</strong>
-      <p>This technology is registered for curated release notes, changed APIs, migrations and deprecations.</p>
-      <div className="impact">
-        <strong>Content rule:</strong> updates should cite official release material and modify evergreen patterns only when recommended usage actually changes.
-      </div>
-    </Card>
-    <Card className="updateCard">
-      <strong>Next AI pass</strong>
-      <p>Compare current official documentation against the last reviewed snapshot, create a concise delta, and flag affected pattern cards for review.</p>
-    </Card>
-  </div>;
-}
