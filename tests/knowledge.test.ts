@@ -46,6 +46,9 @@ describe("searchKnowledge", () => {
 
     const prefixed=searchKnowledge("v3.3.2", 10);
     expect(prefixed.some(result=>result.kind==="update" && result.techId==="airflow")).toBe(true);
+
+    const sourceLabel=searchKnowledge("Apache Spark news", 10);
+    expect(sourceLabel.some(result=>result.kind==="update" && result.techId==="spark")).toBe(true);
   });
 
   it("ranks exact technology matches strongly", () => {
