@@ -28,3 +28,16 @@ Execution would duplicate Datapass Studio and make this reference product heavie
 - AI release refresh pipeline with review diff
 - printable/compact cheat-sheet renderer from the same structured records
 - import/export personal workspace state
+
+## Content safety and CI
+
+The canonical learning payload is `src/content/catalog.json`. `src/content/catalog.ts` is only the typed React adapter. This separation is intentional: AI/content jobs can modify structured data without rewriting UI code.
+
+Every pull request runs:
+
+1. dependency installation with pinned top-level package versions,
+2. dependency-free catalog integrity tests,
+3. TypeScript typechecking,
+4. a production Vite build.
+
+Catalog validation currently enforces required technology coverage, unique technology/pattern IDs, minimum memo coverage, and complete pattern/API/practice pedagogy fields.
