@@ -86,6 +86,27 @@ export function conceptTitle(concept:string){
     .join(" ");
 }
 
+export type PatternFamily = {
+  concept:string;
+  title:string;
+  count:number;
+};
+
+export function patternFamilies():PatternFamily[] {
+  const counts=new Map<string,number>();
+  for(const tech of catalog){
+    for(const pattern of tech.patterns){
+      if(!pattern.concept) continue;
+      counts.set(pattern.concept,(counts.get(pattern.concept)||0)+1);
+    }
+  }
+
+  return [...counts.entries()]
+    .filter(([,count])=>count>=2)
+    .map(([concept,count])=>({concept,title:conceptTitle(concept),count}))
+    .sort((a,b)=>b.count-a.count || a.title.localeCompare(b.title));
+}
+
 export function patternsForConcept(concept:string):RelatedPattern[] {
   if(!concept.trim()) return [];
   return catalog.flatMap(tech =>
