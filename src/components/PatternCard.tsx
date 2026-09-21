@@ -10,6 +10,7 @@ export function PatternCard({
   onToggleFavorite,
   onOpenRelated,
   onCompareConcept,
+  allowedTechIds,
   focused=false
 }:{
   pattern:Pattern;
@@ -17,10 +18,11 @@ export function PatternCard({
   onToggleFavorite:()=>void;
   onOpenRelated:(techId:string,patternId:string)=>void;
   onCompareConcept?:(concept:string)=>void;
+  allowedTechIds?:ReadonlySet<string>;
   focused?:boolean;
 }){
   const [copied,setCopied]=React.useState(false);
-  const related=relatedPatterns(pattern);
+  const related=relatedPatterns(pattern,allowedTechIds);
 
   const copy=async()=>{
     try{
