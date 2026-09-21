@@ -6,19 +6,24 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "test": "node --test tests/*.test.mjs",
+    "check": "npm test && npm run build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@fluentui/react-components": "latest",
-    "@fluentui/react-icons": "latest",
-    "react": "latest",
-    "react-dom": "latest"
+    "@fluentui/react-components": "9.74.7",
+    "@fluentui/react-icons": "2.0.341",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   },
   "devDependencies": {
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
-    "@vitejs/plugin-react": "latest",
-    "typescript": "latest",
-    "vite": "latest"
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "typescript": "7.0.2",
+    "vite": "8.3.0"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   }
 }
