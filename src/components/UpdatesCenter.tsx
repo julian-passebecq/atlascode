@@ -5,6 +5,7 @@ import { updatesDocument } from "../content/updates";
 import {
   loadUpdateVisits,
   newUpdatesSince,
+  recordGlobalUpdateVisit,
   recordUpdateVisit,
   saveUpdateVisits,
   updateScopeKey,
@@ -39,7 +40,7 @@ export function UpdatesCenter({
     const visits=loadUpdateVisits();
     const previous=visits[scope];
     setVisitInfo({scope,lastVisit:previous});
-    saveUpdateVisits(recordUpdateVisit(visits,techId));
+    saveUpdateVisits(techId?recordUpdateVisit(visits,techId):recordGlobalUpdateVisit(visits));
   },[scope,techId]);
 
   const entries=React.useMemo(()=>updatesForTechnology(techId),[techId]);
@@ -47,7 +48,7 @@ export function UpdatesCenter({
   const fresh=React.useMemo(()=>newUpdatesSince(entries,lastVisit),[entries,lastVisit]);
   const freshIds=React.useMemo(()=>new Set(fresh.map(entry=>entry.id)),[fresh]);
   const technology=techId?byId.get(techId):undefined;
-  const latestVersion=entries[0]?.version;
+  const latestVersion=technology?entries[0]?.version:undefined;
 
   return <section className="updatesPage">
     <div className="updatesHeader">
