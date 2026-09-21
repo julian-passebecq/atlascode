@@ -78,13 +78,27 @@ export function matchingTechnologyIds(query:string):Set<string> {
   return new Set(searchKnowledge(query,Math.max(100,catalog.length*50)).map(result=>result.techId));
 }
 
-export function relatedPatterns(pattern:Pattern):RelatedPattern[] {
-  if(!pattern.concept) return [];
+export function conceptTitle(concept:string){
+  return concept
+    .split("-")
+    .filter(Boolean)
+    .map(part=>part.charAt(0).toUpperCase()+part.slice(1))
+    .join(" ");
+}
+
+export function patternsForConcept(concept:string):RelatedPattern[] {
+  if(!concept.trim()) return [];
   return catalog.flatMap(tech =>
     tech.patterns
-      .filter(candidate=>candidate.id!==pattern.id && candidate.concept===pattern.concept)
-      .map(candidate=>({techId:tech.id,techName:tech.name,pattern:candidate}))
+      .filter(pattern=>pattern.concept===concept)
+      .map(pattern=>({techId:tech.id,techName:tech.name,pattern}))
   ).sort((a,b)=>a.techName.localeCompare(b.techName));
+}
+
+export function relatedPatterns(pattern:Pattern):RelatedPattern[] {
+  if(!pattern.concept) return [];
+  return patternsForConcept(pattern.concept)
+    .filter(item=>item.pattern.id!==pattern.id);
 }
 
 export function findPattern(patternId:string){
