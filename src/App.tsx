@@ -290,6 +290,7 @@ export function App({
               reviewState={reviewState}
               onToggleFavorite={toggleFavorite}
               onOpenRelated={(techId,patternId)=>openTarget(techId,"patterns",patternId,"pattern")}
+              onCompareConcept={concept=>{setReviewOpen(false);setCompareConcept(concept);}}
             />
           }
         </main>
