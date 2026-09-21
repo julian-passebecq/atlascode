@@ -260,7 +260,7 @@ export function App({
               type="button"
               className={selectedTrack==="all"?"trackItem selected":"trackItem"}
               aria-pressed={selectedTrack==="all"}
-              onClick={()=>setSelectedTrack("all")}
+              onClick={()=>{setSelectedTrack("all");setCompareConcept(undefined);}}
             >
               <span>All</span>
               <Badge appearance="outline">{catalog.length}</Badge>
@@ -272,7 +272,7 @@ export function App({
                 type="button"
                 className={selectedTrack===track.id?"trackItem selected":"trackItem"}
                 aria-pressed={selectedTrack===track.id}
-                onClick={()=>setSelectedTrack(track.id)}
+                onClick={()=>{setSelectedTrack(track.id);setCompareConcept(undefined);}}
                 title={track.description}
               >
                 <span>{track.label}</span>
@@ -327,6 +327,8 @@ export function App({
         <main className="reader compareReader">
           <PatternCompare
             concept={compareConcept}
+            allowedTechIds={trackTechIds}
+            scopeLabel={selectedTrackLabel}
             onClose={()=>setCompareConcept(undefined)}
             onOpen={(techId,patternId)=>openTarget(techId,"patterns",patternId,"pattern")}
           />
@@ -359,6 +361,7 @@ export function App({
               return {...next,title:workspaceTitle(next)};
             })}
             reviewState={reviewState}
+            allowedTechIds={trackTechIds}
             onToggleFavorite={toggleFavorite}
             onOpenRelated={(techId,patternId)=>openTarget(techId,"patterns",patternId,"pattern")}
             onCompareConcept={concept=>{setReviewOpen(false);setUpdatesOpen(false);setCompareConcept(concept);}}
@@ -390,6 +393,7 @@ function Pane({
   onFocus,
   onState,
   reviewState,
+  allowedTechIds,
   onToggleFavorite,
   onOpenRelated,
   onCompareConcept
@@ -399,6 +403,7 @@ function Pane({
   onFocus:()=>void;
   onState:(state:PaneState)=>void;
   reviewState:ReviewState;
+  allowedTechIds:ReadonlySet<string>;
   onToggleFavorite:(patternId:string)=>void;
   onOpenRelated:(techId:string,patternId:string)=>void;
   onCompareConcept:(concept:string)=>void;
@@ -448,6 +453,7 @@ function Pane({
         <Patterns
           patterns={tech.patterns}
           reviewState={reviewState}
+          allowedTechIds={allowedTechIds}
           onToggleFavorite={onToggleFavorite}
           onOpenRelated={onOpenRelated}
           onCompareConcept={onCompareConcept}
@@ -460,6 +466,7 @@ function Pane({
           patterns={tech.patterns.slice(0,2)}
           examples
           reviewState={reviewState}
+          allowedTechIds={allowedTechIds}
           onToggleFavorite={onToggleFavorite}
           onOpenRelated={onOpenRelated}
           onCompareConcept={onCompareConcept}
@@ -509,6 +516,7 @@ function Patterns({
   patterns,
   examples=false,
   reviewState,
+  allowedTechIds,
   onToggleFavorite,
   onOpenRelated,
   onCompareConcept,
@@ -517,6 +525,7 @@ function Patterns({
   patterns:Pattern[];
   examples?:boolean;
   reviewState:ReviewState;
+  allowedTechIds:ReadonlySet<string>;
   onToggleFavorite:(patternId:string)=>void;
   onOpenRelated:(techId:string,patternId:string)=>void;
   onCompareConcept:(concept:string)=>void;
@@ -535,6 +544,7 @@ function Patterns({
         onToggleFavorite={()=>onToggleFavorite(pattern.id)}
         onOpenRelated={onOpenRelated}
         onCompareConcept={onCompareConcept}
+        allowedTechIds={allowedTechIds}
         focused={focusId===pattern.id}
       />
     )}
