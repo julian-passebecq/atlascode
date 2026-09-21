@@ -44,9 +44,9 @@ test("every technology has usable learning surfaces", () => {
     assert.ok(tech.group?.trim(), tech.id + " missing group");
     assert.ok(tech.tagline?.trim(), tech.id + " missing tagline");
     assert.ok(tech.basics.length >= 4, tech.id + " needs at least 4 memo items");
-    assert.ok(tech.patterns.length >= 1, tech.id + " needs at least one pattern");
-    assert.ok(tech.apis.length >= 1, tech.id + " needs at least one API card");
-    assert.ok(tech.practices.length >= 1, tech.id + " needs at least one practice card");
+    assert.ok(tech.patterns.length >= 4, tech.id + " needs at least 4 patterns");
+    assert.ok(tech.apis.length >= 3, tech.id + " needs at least 3 API cards");
+    assert.ok(tech.practices.length >= 2, tech.id + " needs at least 2 practice cards");
 
     for (const item of tech.basics) {
       assert.ok(item.label?.trim() && item.value?.trim(), tech.id + " has incomplete memo item");
@@ -100,5 +100,19 @@ test("cross-technology concepts are comparable", () => {
 
   for (const [concept, refs] of byConcept) {
     assert.ok(refs.length >= 2, "concept needs at least two comparable patterns: " + concept);
+  }
+});
+
+
+test("placeholder learning content does not regress", () => {
+  for (const tech of catalog.technologies) {
+    assert.ok(
+      tech.apis.every(api => api.name !== "Core surface"),
+      tech.id + " still contains placeholder API content"
+    );
+    assert.ok(
+      tech.practices.every(practice => practice.title !== "Recognize the right tool"),
+      tech.id + " still contains placeholder practice content"
+    );
   }
 });
