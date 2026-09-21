@@ -107,6 +107,13 @@ describe("update visit persistence", () => {
     expect(updateScopeKey("airflow")).toBe("airflow");
   });
 
+  it("rejects blank technology visits instead of mutating global state", () => {
+    const state={airflow:"2026-09-20T10:00:00.000Z"};
+    expect(recordUpdateVisit(state,"   ","2026-09-21T10:00:00.000Z")).toBe(state);
+    expect(recordUpdateVisit(state,"airflow","not-a-date")).toBe(state);
+    expect(state[updateScopeKey()]).toBeUndefined();
+  });
+
   it("global visit marks the global scope and every tracked technology", () => {
     const next=recordGlobalUpdateVisit({},"2026-09-21T10:00:00.000Z");
     expect(next[updateScopeKey()]).toBe("2026-09-21T10:00:00.000Z");
