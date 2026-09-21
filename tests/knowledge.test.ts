@@ -57,6 +57,20 @@ describe("searchKnowledge", () => {
     expect(first?.kind).toBe("technology");
     expect(first?.techId).toBe("pandas");
   });
+
+  it("finds the new Bash Fabric and Databricks learning content", () => {
+    expect(searchKnowledge("strict mode",20).some(result=>
+      result.kind==="pattern" && result.techId==="bash"
+    )).toBe(true);
+
+    expect(searchKnowledge("OneLake ABFS",20).some(result=>
+      result.techId==="fabric"
+    )).toBe(true);
+
+    expect(searchKnowledge("Auto Loader",20).some(result=>
+      result.kind==="pattern" && result.techId==="databricks"
+    )).toBe(true);
+  });
 });
 
 describe("learning tracks", () => {
