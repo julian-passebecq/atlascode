@@ -25,84 +25,25 @@ import { byId, catalog, groups, Mode, Pattern, Technology } from "./content/cata
 import { KnowledgeSearch } from "./components/KnowledgeSearch";
 import { PatternCard } from "./components/PatternCard";
 import { ReviewQueue } from "./components/ReviewQueue";
-import { knowledgeDomId, SearchResult } from "./core/knowledge";
+import { knowledgeDomId, matchingTechnologyIds, SearchResult } from "./core/knowledge";
 import {
   loadReviewState,
   markReviewed,
+  pruneReviewState,
   ReviewState,
   saveReviewState,
   toggleReviewPattern
 } from "./core/review";
-
-type PaneKey = "left" | "right";
-type PaneState = { techId:string; mode:Mode; focusId?:string; focusKind?:"pattern"|"api"; focusSeq?:number };
-type Workspace = {
-  id:string;
-  title:string;
-  split:boolean;
-  left:PaneState;
-  right:PaneState;
-};
-
-const modes:{id:Mode;label:string}[]=[
-  {id:"memo",label:"Memo"},
-  {id:"patterns",label:"Patterns"},
-  {id:"apis",label:"APIs"},
-  {id:"examples",label:"Examples"},
-  {id:"practice",label:"Practice"},
-  {id:"updates",label:"What’s new"}
-];
-const validModes=new Set<Mode>(modes.map(mode=>mode.id));
-
-function makeWorkspace(id:string=crypto.randomUUID(),techId:string="python"):Workspace{
-  return {
-    id,
-    title:byId.get(techId)?.name||"Workspace",
-    split:false,
-    left:{techId,mode:"memo"},
-    right:{techId:"sql",mode:"patterns"}
-  };
-}
-
-function loadWorkspaces():Workspace[]{
-  try{
-    const parsed=JSON.parse(localStorage.getItem("atlascode.workspaces")||"[]");
-    if(!Array.isArray(parsed)||!parsed.length) return [makeWorkspace("starter","python")];
-    const valid=parsed.filter((workspace):workspace is Workspace=>{
-      if(!workspace||typeof workspace!=="object") return false;
-      const candidate=workspace as Partial<Workspace>;
-      return typeof candidate.id==="string"
-        && typeof candidate.title==="string"
-        && typeof candidate.split==="boolean"
-        && !!candidate.left
-        && !!candidate.right
-        && typeof candidate.left.techId==="string"
-        && typeof candidate.left.mode==="string"
-        && typeof candidate.right.techId==="string"
-        && typeof candidate.right.mode==="string"
-        && validModes.has(candidate.left.mode as Mode)
-        && validModes.has(candidate.right.mode as Mode)
-        && byId.has(candidate.left.techId)
-        && byId.has(candidate.right.techId);
-    });
-    return valid.length?valid:[makeWorkspace("starter","python")];
-  }catch{
-    return [makeWorkspace("starter","python")];
-  }
-}
-
-function saveWorkspaces(workspaces:Workspace[]){
-  try{
-    const persistent=workspaces.map(workspace=>({
-      ...workspace,
-      left:{techId:workspace.left.techId,mode:workspace.left.mode},
-      right:{techId:workspace.right.techId,mode:workspace.right.mode}
-    }));
-    localStorage.setItem("atlascode.workspaces",JSON.stringify(persistent));
-  }catch{
-    // Workspace persistence is best-effort; the active session must remain usable.
-  }
-}
+import {
+  createWorkspace,
+  loadWorkspaces,
+  modes,
+  PaneKey,
+  PaneState,
+  saveWorkspaces,
+  Workspace,
+  workspaceTitle
+} from "./core/workspaces";
 
 export function App({
   dark,
@@ -117,7 +58,8 @@ export function App({
   const [query,setQuery]=React.useState("");
   const [compact,setCompact]=React.useState(false);
   const [reviewOpen,setReviewOpen]=React.useState(false);
-  const [reviewState,setReviewState]=React.useState<ReviewState>(loadReviewState);
+  const validPatternIds=React.useMemo(()=>new Set(catalog.flatMap(tech=>tech.patterns.map(pattern=>pattern.id))),[]);
+  const [reviewState,setReviewState]=React.useState<ReviewState>(()=>pruneReviewState(loadReviewState(),validPatternIds));
   const focusSeq=React.useRef(0);
 
   const active=workspaces.find(workspace=>workspace.id===activeId)||workspaces[0];
@@ -134,19 +76,13 @@ export function App({
     setWorkspaces(current=>current.map(workspace=>workspace.id===active.id?fn(workspace):workspace));
   };
 
-  const titleFor=(workspace:Workspace)=>{
-    const left=byId.get(workspace.left.techId)?.name||"Workspace";
-    if(!workspace.split) return left;
-    return left+" + "+(byId.get(workspace.right.techId)?.name||"");
-  };
-
   const openTarget=(techId:string,mode?:Mode,focusId?:string,focusKind?:"pattern"|"api")=>{
     setReviewOpen(false);
     const nextFocusSeq=++focusSeq.current;
     mutate(workspace=>{
       const pane={...workspace[activePane],techId,...(mode?{mode}:{}),focusId,focusKind,focusSeq:nextFocusSeq};
       const next={...workspace,[activePane]:pane} as Workspace;
-      return {...next,title:titleFor(next)};
+      return {...next,title:workspaceTitle(next)};
     });
   };
 
@@ -157,7 +93,7 @@ export function App({
   };
 
   const addWorkspace=()=>{
-    const next=makeWorkspace();
+    const next=createWorkspace();
     setWorkspaces(current=>[...current,next]);
     setActiveId(next.id);
     setActivePane("left");
@@ -180,17 +116,8 @@ export function App({
     setReviewState(state=>markReviewed(state,patternId));
   };
 
-  const filtered=catalog.filter(tech=>{
-    const needle=query.trim().toLowerCase();
-    if(!needle) return true;
-    return [
-      tech.name,
-      tech.group,
-      tech.tagline,
-      ...tech.patterns.map(pattern=>pattern.title),
-      ...tech.patterns.flatMap(pattern=>pattern.tags)
-    ].join(" ").toLowerCase().includes(needle);
-  });
+  const matchingTechIds=React.useMemo(()=>matchingTechnologyIds(query),[query]);
+  const filtered=catalog.filter(tech=>matchingTechIds.has(tech.id));
 
   return <div className={compact?"app compact":"app"}>
     <header className="topbar">
@@ -206,6 +133,7 @@ export function App({
         <Input
           value={query}
           onChange={(_,data)=>setQuery(data.value)}
+          onKeyDown={event=>{if(event.key==="Escape") setQuery("");}}
           contentBefore={<Search24Regular/>}
           placeholder="Search latest row, QUALIFY, XLOOKUP, Window..."
         />
@@ -262,7 +190,7 @@ export function App({
           icon={<SplitHorizontal24Regular/>}
           onClick={()=>mutate(workspace=>{
             const next={...workspace,split:!workspace.split};
-            return {...next,title:titleFor(next)};
+            return {...next,title:workspaceTitle(next)};
           })}
         >
           Split
@@ -322,7 +250,7 @@ export function App({
             onFocus={()=>setActivePane("left")}
             onState={state=>mutate(workspace=>{
               const next={...workspace,left:state};
-              return {...next,title:titleFor(next)};
+              return {...next,title:workspaceTitle(next)};
             })}
             reviewState={reviewState}
             onToggleFavorite={toggleFavorite}
@@ -335,7 +263,7 @@ export function App({
               onFocus={()=>setActivePane("right")}
               onState={state=>mutate(workspace=>{
                 const next={...workspace,right:state};
-                return {...next,title:titleFor(next)};
+                return {...next,title:workspaceTitle(next)};
               })}
               reviewState={reviewState}
               onToggleFavorite={toggleFavorite}
