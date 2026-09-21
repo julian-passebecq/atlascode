@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "contentVersion": "0.6.0",
+  "contentVersion": "0.7.0",
   "reviewedAt": "2026-09-21",
   "technologies": [
     {
@@ -50,6 +50,45 @@
           "tags": [
             "iterator",
             "memory"
+          ]
+        },
+        {
+          "id": "py-context",
+          "title": "Own resource lifetime with a context manager",
+          "language": "python",
+          "code": "from pathlib import Path\n\nwith Path(\"events.jsonl\").open() as handle:\n    for line in handle:\n        process(line)",
+          "why": "Context managers make cleanup deterministic even when an exception occurs.",
+          "remember": "If something must be closed/released, prefer a with block around its lifetime.",
+          "tags": [
+            "context-manager",
+            "resource",
+            "io"
+          ]
+        },
+        {
+          "id": "py-errors",
+          "title": "Catch expected exceptions at the boundary",
+          "language": "python",
+          "code": "def load_config(path):\n    try:\n        return json.loads(Path(path).read_text())\n    except FileNotFoundError:\n        raise RuntimeError(f\"Missing config: {path}\")\n    except json.JSONDecodeError as exc:\n        raise RuntimeError(f\"Invalid JSON: {exc}\") from exc",
+          "why": "Narrow exception handling adds useful domain context without hiding unrelated failures.",
+          "remember": "Catch what you expect, add context, preserve the original cause.",
+          "tags": [
+            "exceptions",
+            "boundary",
+            "errors"
+          ]
+        },
+        {
+          "id": "py-dataclass",
+          "title": "Use a dataclass for a small explicit record",
+          "language": "python",
+          "code": "from dataclasses import dataclass\nfrom datetime import datetime\n\n@dataclass(frozen=True)\nclass Event:\n    id: str\n    occurred_at: datetime\n    amount: float",
+          "why": "A dataclass gives named typed fields and generated value-oriented behavior without manual boilerplate.",
+          "remember": "Use it when a tuple/dict has become a real domain record with stable fields.",
+          "tags": [
+            "dataclass",
+            "typing",
+            "model"
           ]
         }
       ],
@@ -350,6 +389,45 @@
           "tags": [
             "join",
             "broadcast"
+          ]
+        },
+        {
+          "id": "spark-explain",
+          "title": "Read the physical plan before tuning",
+          "language": "python",
+          "code": "query = (\n    fact.join(dim, 'country_id')\n    .groupBy('country_id')\n    .agg(F.sum('amount').alias('revenue'))\n)\n\nquery.explain(\"formatted\")",
+          "why": "The physical plan reveals exchanges, join strategies and scans that explain where distributed work happens.",
+          "remember": "Tune what Spark actually planned, not what you assume the code means.",
+          "tags": [
+            "explain",
+            "plan",
+            "performance"
+          ]
+        },
+        {
+          "id": "spark-partitions",
+          "title": "Choose repartition vs coalesce deliberately",
+          "language": "python",
+          "code": "# redistribute by a useful key\nbalanced = df.repartition(\"customer_id\")\n\n# reduce output partitions after filtering\nsmaller = filtered.coalesce(16)",
+          "why": "repartition performs a shuffle to rebalance/change partitioning; coalesce is commonly used to reduce partitions with less movement.",
+          "remember": "Repartition to redistribute; coalesce mainly to shrink partition count.",
+          "tags": [
+            "partition",
+            "repartition",
+            "coalesce"
+          ]
+        },
+        {
+          "id": "spark-cache",
+          "title": "Cache only reused expensive intermediates",
+          "language": "python",
+          "code": "base = expensive_transform(events).cache()\n\ndaily = base.groupBy(\"event_date\").count()\nby_type = base.groupBy(\"event_type\").count()\n\nbase.unpersist()",
+          "why": "Caching can avoid recomputation when the same expensive lineage is reused, but consumes cluster memory/storage.",
+          "remember": "Cache for reuse, not by habit; unpersist when the reuse window is over.",
+          "tags": [
+            "cache",
+            "lineage",
+            "performance"
           ]
         }
       ],
@@ -900,6 +978,46 @@
             "cdc"
           ],
           "concept": "upsert-by-key"
+        },
+        {
+          "id": "delta-history",
+          "title": "Use table history for reproducible debugging",
+          "language": "sql",
+          "code": "describe history silver.customers;\n\nselect *\nfrom silver.customers\nversion as of 120;",
+          "why": "Transaction history and time travel let you inspect or reproduce a prior table state.",
+          "remember": "When a table changed unexpectedly, identify the commit first, then compare versions.",
+          "tags": [
+            "history",
+            "time-travel",
+            "debugging"
+          ]
+        },
+        {
+          "id": "delta-schema",
+          "title": "Treat schema evolution as an explicit decision",
+          "language": "python",
+          "code": "(\n  updates.write\n  .format(\"delta\")\n  .option(\"mergeSchema\", \"true\")\n  .mode(\"append\")\n  .save(path)\n)",
+          "why": "Delta can evolve schemas, but enabling evolution should be intentional because it changes the table contract.",
+          "remember": "Schema drift is a contract change; review it instead of silently accepting every new column.",
+          "tags": [
+            "schema",
+            "evolution",
+            "contract"
+          ]
+        },
+        {
+          "id": "delta-idempotent-batch",
+          "title": "Replace the same logical batch on retry",
+          "language": "python",
+          "code": "condition = \"event_date = '2026-09-21'\"\n(\n  batch.write\n  .format(\"delta\")\n  .mode(\"overwrite\")\n  .option(\"replaceWhere\", condition)\n  .saveAsTable(\"silver.events\")\n)",
+          "why": "Predicate-scoped replacement can make a deterministic batch retry rewrite only its target partition.",
+          "remember": "A batch rerun should replace its logical slice rather than append duplicates.",
+          "tags": [
+            "idempotency",
+            "partition",
+            "retry"
+          ],
+          "concept": "idempotent-batch"
         }
       ],
       "apis": [
@@ -1698,6 +1816,58 @@
           "tags": [
             "core"
           ]
+        },
+        {
+          "id": "dax-calculate",
+          "title": "Change filter context with CALCULATE",
+          "language": "dax",
+          "code": "Revenue LY =\nCALCULATE(\n    [Revenue],\n    DATEADD('Date'[Date], -1, YEAR)\n)",
+          "why": "CALCULATE evaluates an expression under modified filter context.",
+          "remember": "Ask two questions: what is the current filter context, and what does CALCULATE change?",
+          "tags": [
+            "calculate",
+            "filter-context",
+            "time-intelligence"
+          ]
+        },
+        {
+          "id": "dax-share",
+          "title": "Build a ratio with a controlled denominator",
+          "language": "dax",
+          "code": "Revenue Share =\nDIVIDE(\n    [Revenue],\n    CALCULATE(\n        [Revenue],\n        REMOVEFILTERS(Product[Category])\n    )\n)",
+          "why": "The denominator removes only the category filter while preserving other report filters.",
+          "remember": "Remove exactly the filter you want to ignore; keep the rest of the report context.",
+          "tags": [
+            "calculate",
+            "removefilters",
+            "ratio"
+          ]
+        },
+        {
+          "id": "dax-sumx",
+          "title": "Iterate when the expression is row-dependent",
+          "language": "dax",
+          "code": "Revenue =\nSUMX(\n    Sales,\n    Sales[Quantity] * Sales[UnitPrice]\n)",
+          "why": "SUMX evaluates an expression for each row, then aggregates the results.",
+          "remember": "Use an iterator when you must calculate per-row logic before aggregation.",
+          "tags": [
+            "sumx",
+            "iterator",
+            "measure"
+          ]
+        },
+        {
+          "id": "dax-divide",
+          "title": "Prefer DIVIDE for safe ratios",
+          "language": "dax",
+          "code": "Margin % =\nDIVIDE(\n    [Gross Margin],\n    [Revenue]\n)",
+          "why": "DIVIDE handles zero/blank denominators explicitly and reads like the business calculation.",
+          "remember": "For measures, DIVIDE is usually clearer and safer than the / operator.",
+          "tags": [
+            "divide",
+            "ratio",
+            "measure"
+          ]
         }
       ],
       "apis": [
@@ -1752,6 +1922,59 @@
             "core"
           ],
           "concept": "keyed-lookup"
+        },
+        {
+          "id": "excel-xlookup",
+          "title": "Lookup by a stable key",
+          "language": "excel",
+          "code": "=XLOOKUP(\n  A2,\n  Customers[CustomerID],\n  Customers[Segment],\n  \"Unknown\"\n)",
+          "why": "XLOOKUP separates lookup and return arrays and provides explicit not-found behavior.",
+          "remember": "Lookup on stable IDs, not display names.",
+          "tags": [
+            "xlookup",
+            "lookup",
+            "keyed-lookup"
+          ],
+          "concept": "keyed-lookup"
+        },
+        {
+          "id": "excel-let",
+          "title": "Name repeated formula expressions with LET",
+          "language": "excel",
+          "code": "=LET(\n  revenue, B2:B100*C2:C100,\n  valid, A2:A100<>\"\",\n  SUM(FILTER(revenue, valid))\n)",
+          "why": "LET improves readability and prevents repeated evaluation of the same expression.",
+          "remember": "Name meaningful intermediate calculations inside long formulas.",
+          "tags": [
+            "let",
+            "formula",
+            "readability"
+          ]
+        },
+        {
+          "id": "excel-filter",
+          "title": "Return matching rows as a dynamic array",
+          "language": "excel",
+          "code": "=FILTER(\n  Orders[[OrderID]:[Amount]],\n  Orders[Status]=\"Open\",\n  \"No open orders\"\n)",
+          "why": "FILTER returns a spilling result set without manual helper columns or copied formulas.",
+          "remember": "Think of FILTER as a small declarative WHERE clause over a range/table.",
+          "tags": [
+            "filter",
+            "dynamic-array",
+            "table"
+          ]
+        },
+        {
+          "id": "excel-sumifs",
+          "title": "Aggregate with explicit criteria",
+          "language": "excel",
+          "code": "=SUMIFS(\n  Orders[Amount],\n  Orders[CustomerID], A2,\n  Orders[Status], \"Paid\"\n)",
+          "why": "SUMIFS performs a grouped-style conditional aggregation for a known set of criteria.",
+          "remember": "Sum range first, then criteria-range / criteria pairs.",
+          "tags": [
+            "sumifs",
+            "aggregation",
+            "criteria"
+          ]
         }
       ],
       "apis": [
