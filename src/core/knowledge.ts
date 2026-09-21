@@ -72,7 +72,7 @@ export function searchKnowledge(query:string, limit=12):SearchResult[] {
 
     for(const update of updates.filter(entry=>entry.techId===tech.id)){
       const text=normalize([
-        update.version,update.title,update.summary,update.impact,
+        update.version,"v"+update.version,update.title,update.summary,update.impact,
         update.kind,update.publishedAt,tech.name
       ].join(" "));
       if(!includesAll(text,words)) continue;
