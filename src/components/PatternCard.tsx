@@ -9,12 +9,14 @@ export function PatternCard({
   favorite,
   onToggleFavorite,
   onOpenRelated,
+  onCompareConcept,
   focused=false
 }:{
   pattern:Pattern;
   favorite:boolean;
   onToggleFavorite:()=>void;
   onOpenRelated:(techId:string,patternId:string)=>void;
+  onCompareConcept?:(concept:string)=>void;
   focused?:boolean;
 }){
   const [copied,setCopied]=React.useState(false);
@@ -56,6 +58,7 @@ export function PatternCard({
     {related.length>0&&<div className="relatedStrip">
       <div className="relatedLabel">Same pattern in</div>
       <div className="relatedLinks">
+        {pattern.concept&&onCompareConcept&&<button className="compareFamilyButton" onClick={()=>onCompareConcept(pattern.concept!)}>Compare family</button>}
         {related.map(item=>
           <button key={item.techId+":"+item.pattern.id} onClick={()=>onOpenRelated(item.techId,item.pattern.id)}>
             {item.techName}
