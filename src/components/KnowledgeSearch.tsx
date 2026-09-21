@@ -13,7 +13,7 @@ export function KnowledgeSearch({
 
   return <div className="searchResults" role="region" aria-label="Knowledge search results">
     <div className="searchSummary" aria-live="polite">
-      <Text size={200}>{results.length?results.length+" direct matches":"No direct matches"}</Text>
+      <Text size={200}>{results.length?results.length+" matches shown":"No direct matches"}</Text>
     </div>
     {results.map(result=>
       <Button
