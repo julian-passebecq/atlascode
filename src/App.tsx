@@ -12,7 +12,7 @@ const modes: {id:Mode;label:string}[] = [
   {id:"examples",label:"Examples"},{id:"practice",label:"Practice"},{id:"updates",label:"What\u2019s new"}
 ];
 
-function makeWorkspace(id = crypto.randomUUID(), techId = "python"): Workspace {
+function makeWorkspace(id: string = crypto.randomUUID(), techId: string = "python"): Workspace {
   return { id, title: byId.get(techId)?.name || "Workspace", split:false, left:{techId,mode:"memo"}, right:{techId:"sql",mode:"patterns"} };
 }
 function loadWorkspaces(): Workspace[] {
