@@ -111,7 +111,7 @@ describe("update visit persistence", () => {
     const state={airflow:"2026-09-20T10:00:00.000Z"};
     expect(recordUpdateVisit(state,"   ","2026-09-21T10:00:00.000Z")).toBe(state);
     expect(recordUpdateVisit(state,"airflow","not-a-date")).toBe(state);
-    expect(state[updateScopeKey()]).toBeUndefined();
+    expect(Object.prototype.hasOwnProperty.call(state,updateScopeKey())).toBe(false);
   });
 
   it("global visit marks the global scope and every tracked technology", () => {
