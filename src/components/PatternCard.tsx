@@ -41,10 +41,10 @@ export function PatternCard({
       </div>
       <div className="patternActions">
         <Tooltip content={favorite?"Remove from review":"Add to review"} relationship="label">
-          <Button appearance="subtle" icon={favorite?<Star24Filled/>:<Star24Regular/>} onClick={onToggleFavorite}/>
+          <Button appearance="subtle" aria-label={favorite?"Remove from review":"Add to review"} aria-pressed={favorite} icon={favorite?<Star24Filled/>:<Star24Regular/>} onClick={onToggleFavorite}/>
         </Tooltip>
         <Tooltip content={copied?"Copied":"Copy pattern"} relationship="label">
-          <Button appearance="subtle" icon={<Copy24Regular/>} onClick={copy}/>
+          <Button appearance="subtle" aria-label={copied?"Copied":"Copy pattern"} icon={<Copy24Regular/>} onClick={copy}/>
         </Tooltip>
       </div>
     </div>
