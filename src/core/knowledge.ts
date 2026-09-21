@@ -92,6 +92,15 @@ export function searchKnowledge(query:string, limit=12):SearchResult[] {
   return hits.sort((a,b)=>b.score-a.score || a.title.localeCompare(b.title)).slice(0,safeLimit);
 }
 
+export function trackScopeForTechnology(
+  track:TrackId|"all",
+  techId:string
+):TrackId|"all" {
+  if(track==="all") return "all";
+  const tech=catalog.find(item=>item.id===techId);
+  return tech?.tracks.includes(track)?track:"all";
+}
+
 export function technologyIdsForTrack(track:TrackId|"all"):Set<string> {
   return new Set(
     catalog
