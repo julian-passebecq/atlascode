@@ -1,5 +1,6 @@
 import { catalog, Mode, Pattern } from "../content/catalog";
 import { trackById } from "../content/tracks";
+import type { TrackId } from "../content/tracks";
 import { updates } from "../content/updates";
 
 export type SearchResult = {
@@ -89,6 +90,14 @@ export function searchKnowledge(query:string, limit=12):SearchResult[] {
   }
 
   return hits.sort((a,b)=>b.score-a.score || a.title.localeCompare(b.title)).slice(0,safeLimit);
+}
+
+export function technologyIdsForTrack(track:TrackId|"all"):Set<string> {
+  return new Set(
+    catalog
+      .filter(tech=>track==="all"||tech.tracks.includes(track))
+      .map(tech=>tech.id)
+  );
 }
 
 export function matchingTechnologyIds(query:string):Set<string> {
