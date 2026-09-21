@@ -29,7 +29,7 @@ import { PatternCard } from "./components/PatternCard";
 import { PatternCompare } from "./components/PatternCompare";
 import { ReviewQueue } from "./components/ReviewQueue";
 import { UpdatesCenter } from "./components/UpdatesCenter";
-import { knowledgeDomId, matchingTechnologyIds, patternFamilies, SearchResult } from "./core/knowledge";
+import { knowledgeDomId, matchingTechnologyIds, patternFamilies, SearchResult, technologyIdsForTrack } from "./core/knowledge";
 import {
   loadReviewState,
   markReviewed,
@@ -139,10 +139,7 @@ export function App({
   };
 
   const matchingTechIds=React.useMemo(()=>matchingTechnologyIds(query),[query]);
-  const trackTechIds=React.useMemo(
-    ()=>new Set(catalog.filter(tech=>selectedTrack==="all"||tech.tracks.includes(selectedTrack)).map(tech=>tech.id)),
-    [selectedTrack]
-  );
+  const trackTechIds=React.useMemo(()=>technologyIdsForTrack(selectedTrack),[selectedTrack]);
   const families=React.useMemo(()=>patternFamilies(trackTechIds),[trackTechIds]);
   const filtered=catalog.filter(tech=>matchingTechIds.has(tech.id)&&trackTechIds.has(tech.id));
   const selectedTrackLabel=selectedTrack==="all"?"All tracks":trackById.get(selectedTrack)?.label||selectedTrack;
