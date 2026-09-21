@@ -376,6 +376,7 @@ export function App({
                 return {...next,title:workspaceTitle(next)};
               })}
               reviewState={reviewState}
+              allowedTechIds={trackTechIds}
               onToggleFavorite={toggleFavorite}
               onOpenRelated={(techId,patternId)=>openTarget(techId,"patterns",patternId,"pattern")}
               onCompareConcept={concept=>{setReviewOpen(false);setUpdatesOpen(false);setCompareConcept(concept);}}
