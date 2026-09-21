@@ -3,6 +3,7 @@ import { byId } from "../src/content/catalog";
 import {
   findPattern,
   knowledgeDomId,
+  matchingTechnologyIds,
   relatedPatterns,
   searchKnowledge
 } from "../src/core/knowledge";
@@ -33,6 +34,21 @@ describe("searchKnowledge", () => {
     const [first]=searchKnowledge("pandas", 5);
     expect(first?.kind).toBe("technology");
     expect(first?.techId).toBe("pandas");
+  });
+});
+
+describe("matchingTechnologyIds", () => {
+  it("keeps explorer filtering consistent with API and code-term search", () => {
+    expect(matchingTechnologyIds("XLOOKUP").has("excel")).toBe(true);
+    expect(matchingTechnologyIds("F.broadcast").has("spark")).toBe(true);
+    expect(matchingTechnologyIds("definitely-no-match").size).toBe(0);
+  });
+
+  it("returns every technology for an empty query", () => {
+    const ids=matchingTechnologyIds("");
+    expect(ids.has("python")).toBe(true);
+    expect(ids.has("excel")).toBe(true);
+    expect(ids.size).toBeGreaterThanOrEqual(20);
   });
 });
 
