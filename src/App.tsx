@@ -24,6 +24,7 @@ import {
 import { byId, catalog, groups, Mode, Pattern, Technology } from "./content/catalog";
 import { KnowledgeSearch } from "./components/KnowledgeSearch";
 import { PatternCard } from "./components/PatternCard";
+import { PatternCompare } from "./components/PatternCompare";
 import { ReviewQueue } from "./components/ReviewQueue";
 import { knowledgeDomId, matchingTechnologyIds, SearchResult } from "./core/knowledge";
 import {
@@ -58,6 +59,7 @@ export function App({
   const [query,setQuery]=React.useState("");
   const [compact,setCompact]=React.useState(false);
   const [reviewOpen,setReviewOpen]=React.useState(false);
+  const [compareConcept,setCompareConcept]=React.useState<string>();
   const validPatternIds=React.useMemo(()=>new Set(catalog.flatMap(tech=>tech.patterns.map(pattern=>pattern.id))),[]);
   const [reviewState,setReviewState]=React.useState<ReviewState>(()=>pruneReviewState(loadReviewState(),validPatternIds));
   const focusSeq=React.useRef(0);
@@ -78,6 +80,7 @@ export function App({
 
   const openTarget=(techId:string,mode?:Mode,focusId?:string,focusKind?:"pattern"|"api")=>{
     setReviewOpen(false);
+    setCompareConcept(undefined);
     const nextFocusSeq=++focusSeq.current;
     mutate(workspace=>{
       const pane={...workspace[activePane],techId,...(mode?{mode}:{}),focusId,focusKind,focusSeq:nextFocusSeq};
@@ -98,6 +101,7 @@ export function App({
     setActiveId(next.id);
     setActivePane("left");
     setReviewOpen(false);
+    setCompareConcept(undefined);
   };
 
   const closeWorkspace=(id:string)=>{
@@ -188,7 +192,7 @@ export function App({
           appearance={reviewOpen?"primary":"subtle"}
           aria-pressed={reviewOpen}
           icon={<Star24Filled/>}
-          onClick={()=>setReviewOpen(value=>!value)}
+          onClick={()=>{setCompareConcept(undefined);setReviewOpen(value=>!value);}}
         >
           Review {Object.keys(reviewState).length}
         </Button>
@@ -241,7 +245,16 @@ export function App({
         </nav>
       </aside>
 
-      {reviewOpen?
+      {compareConcept?
+        <main className="reader compareReader">
+          <PatternCompare
+            concept={compareConcept}
+            onClose={()=>setCompareConcept(undefined)}
+            onOpen={(techId,patternId)=>openTarget(techId,"patterns",patternId,"pattern")}
+          />
+        </main>
+        :
+        reviewOpen?
         <main className="reader reviewReader">
           <ReviewQueue
             state={reviewState}
@@ -263,6 +276,7 @@ export function App({
             reviewState={reviewState}
             onToggleFavorite={toggleFavorite}
             onOpenRelated={(techId,patternId)=>openTarget(techId,"patterns",patternId,"pattern")}
+            onCompareConcept={concept=>{setReviewOpen(false);setCompareConcept(concept);}}
           />
           {active.split&&
             <Pane
@@ -291,7 +305,8 @@ function Pane({
   onState,
   reviewState,
   onToggleFavorite,
-  onOpenRelated
+  onOpenRelated,
+  onCompareConcept
 }:{
   state:PaneState;
   active:boolean;
@@ -300,6 +315,7 @@ function Pane({
   reviewState:ReviewState;
   onToggleFavorite:(patternId:string)=>void;
   onOpenRelated:(techId:string,patternId:string)=>void;
+  onCompareConcept:(concept:string)=>void;
 }){
   const tech=byId.get(state.techId)||catalog[0];
 
@@ -342,6 +358,7 @@ function Pane({
           reviewState={reviewState}
           onToggleFavorite={onToggleFavorite}
           onOpenRelated={onOpenRelated}
+          onCompareConcept={onCompareConcept}
           focusId={state.focusKind==="pattern"?state.focusId:undefined}
         />
       }
@@ -353,6 +370,7 @@ function Pane({
           reviewState={reviewState}
           onToggleFavorite={onToggleFavorite}
           onOpenRelated={onOpenRelated}
+          onCompareConcept={onCompareConcept}
           focusId={state.focusKind==="pattern"?state.focusId:undefined}
         />
       }
@@ -401,6 +419,7 @@ function Patterns({
   reviewState,
   onToggleFavorite,
   onOpenRelated,
+  onCompareConcept,
   focusId
 }:{
   patterns:Pattern[];
@@ -408,6 +427,7 @@ function Patterns({
   reviewState:ReviewState;
   onToggleFavorite:(patternId:string)=>void;
   onOpenRelated:(techId:string,patternId:string)=>void;
+  onCompareConcept:(concept:string)=>void;
   focusId?:string;
 }){
   return <div className="contentColumn">
@@ -422,6 +442,7 @@ function Patterns({
         favorite={!!reviewState[pattern.id]}
         onToggleFavorite={()=>onToggleFavorite(pattern.id)}
         onOpenRelated={onOpenRelated}
+        onCompareConcept={onCompareConcept}
         focused={focusId===pattern.id}
       />
     )}
