@@ -9,6 +9,7 @@ export type Pattern = {
   why:string;
   remember:string;
   tags:string[];
+  concept?:string;
 };
 export type Technology = {
   id:string;
@@ -21,7 +22,7 @@ export type Technology = {
   practices:{title:string;prompt:string;pattern:string;reveal:string}[];
 };
 export type CatalogDocument = {
-  schemaVersion:number;
+  schemaVersion:1|2;
   contentVersion:string;
   reviewedAt:string;
   technologies:Technology[];
