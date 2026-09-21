@@ -22,7 +22,13 @@ const normalize = (value:string) =>
 
 const includesAll = (text:string, words:string[]) => words.every(word => text.includes(word));
 
+export function knowledgeDomId(kind:"pattern"|"api",id:string){
+  return "knowledge-"+kind+"-"+encodeURIComponent(id);
+}
+
 export function searchKnowledge(query:string, limit=12):SearchResult[] {
+  const safeLimit=Math.max(0,Math.floor(limit));
+  if(!safeLimit) return [];
   const words=normalize(query).trim().split(/\s+/).filter(Boolean);
   if(!words.length) return [];
 
@@ -64,7 +70,7 @@ export function searchKnowledge(query:string, limit=12):SearchResult[] {
     }
   }
 
-  return hits.sort((a,b)=>b.score-a.score || a.title.localeCompare(b.title)).slice(0,limit);
+  return hits.sort((a,b)=>b.score-a.score || a.title.localeCompare(b.title)).slice(0,safeLimit);
 }
 
 export function relatedPatterns(pattern:Pattern):RelatedPattern[] {
