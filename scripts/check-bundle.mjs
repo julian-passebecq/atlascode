@@ -1,13 +1,14 @@
 import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const limitBytes=500*1024;
-const assetsDir=new URL("../dist/assets/",import.meta.url);
+const assetsDir=fileURLToPath(new URL("../dist/assets/",import.meta.url));
 
 const files=(await readdir(assetsDir)).filter(file=>file.endsWith(".js"));
 const sizes=await Promise.all(files.map(async file=>({
   file,
-  bytes:(await stat(join(assetsDir.pathname,file))).size
+  bytes:(await stat(join(assetsDir,file))).size
 })));
 
 sizes.sort((a,b)=>b.bytes-a.bytes);
