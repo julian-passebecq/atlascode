@@ -4,14 +4,18 @@ import { conceptTitle, patternsForConcept } from "../core/knowledge";
 
 export function PatternCompare({
   concept,
+  allowedTechIds,
+  scopeLabel,
   onClose,
   onOpen
 }:{
   concept:string;
+  allowedTechIds?:ReadonlySet<string>;
+  scopeLabel?:string;
   onClose:()=>void;
   onOpen:(techId:string,patternId:string)=>void;
 }){
-  const items=patternsForConcept(concept);
+  const items=patternsForConcept(concept,allowedTechIds);
 
   return <section className="comparePage">
     <div className="compareHeader">
@@ -19,7 +23,7 @@ export function PatternCompare({
         <div className="sectionEyebrow">CROSS-TECHNOLOGY PATTERN</div>
         <Title2>{conceptTitle(concept)}</Title2>
         <Text className="muted">
-          Same problem shape, different ecosystem syntax. Compare the invariant before memorizing the implementation.
+          Same problem shape, different ecosystem syntax. Compare the invariant before memorizing the implementation.{scopeLabel?" Scope: "+scopeLabel+".":""}
         </Text>
       </div>
       <div className="compareHeaderActions">
