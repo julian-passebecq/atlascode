@@ -85,6 +85,19 @@ test("cross-technology concepts are comparable", () => {
   const latest = byConcept.get("latest-row");
   assert.ok(new Set(latest.map(item => item.techId)).size >= 6, "latest-row should span at least 6 technologies");
 
+  const minimumFamilySizes = {
+    "anti-join": 5,
+    "grouped-aggregation": 5,
+    "upsert-by-key": 4
+  };
+  for (const [concept, minimum] of Object.entries(minimumFamilySizes)) {
+    const refs = byConcept.get(concept) || [];
+    assert.ok(
+      new Set(refs.map(item => item.techId)).size >= minimum,
+      concept + " should span at least " + minimum + " technologies"
+    );
+  }
+
   for (const [concept, refs] of byConcept) {
     assert.ok(refs.length >= 2, "concept needs at least two comparable patterns: " + concept);
   }
