@@ -18,9 +18,6 @@ describe("searchKnowledge", () => {
     const results=searchKnowledge("latest row", 20);
     const patterns=results.filter(result=>result.kind==="pattern");
     expect(patterns.length).toBeGreaterThanOrEqual(6);
-    expect(new Set(patterns.map(result=>result.techId))).toEqual(
-      expect.objectContaining(new Set())
-    );
     expect(patterns.some(result=>result.techId==="bigquery")).toBe(true);
     expect(patterns.some(result=>result.techId==="postgres")).toBe(true);
     expect(patterns.every(result=>result.mode==="patterns")).toBe(true);
