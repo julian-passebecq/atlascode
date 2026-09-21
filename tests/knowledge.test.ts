@@ -141,6 +141,13 @@ describe("pattern families", () => {
     );
     expect(aggregate.length).toBeGreaterThanOrEqual(5);
     expect(upsert.length).toBeGreaterThanOrEqual(4);
+
+    const medallion=patternsForConcept("medallion-layers");
+    expect(new Set(medallion.map(item=>item.techId))).toEqual(new Set(["databricks","fabric"]));
+
+    const scriptFailure=patternsForConcept("script-failure-boundary");
+    expect(new Set(scriptFailure.map(item=>item.techId))).toEqual(new Set(["bash","powershell"]));
+
     expect(conceptTitle("upsert-by-key")).toBe("Upsert By Key");
     expect(patternsForConcept("missing-concept")).toEqual([]);
   });
