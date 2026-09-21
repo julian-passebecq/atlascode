@@ -1,4 +1,5 @@
 import { catalog, Mode, Pattern } from "../content/catalog";
+import { trackById } from "../content/tracks";
 import { updates } from "../content/updates";
 
 export type SearchResult = {
@@ -35,7 +36,8 @@ export function searchKnowledge(query:string, limit=12):SearchResult[] {
 
   const hits:SearchResult[]=[];
   for(const tech of catalog){
-    const techText=normalize([tech.name,tech.group,tech.tagline].join(" "));
+    const trackText=tech.tracks.map(trackId=>{const track=trackById.get(trackId);return [trackId,track?.label||"",track?.description||""].join(" ");}).join(" ");
+    const techText=normalize([tech.name,tech.group,tech.tagline,trackText].join(" "));
     if(includesAll(techText,words)){
       hits.push({
         kind:"technology",id:tech.id,techId:tech.id,techName:tech.name,
@@ -108,9 +110,10 @@ export type PatternFamily = {
   count:number;
 };
 
-export function patternFamilies():PatternFamily[] {
+export function patternFamilies(allowedTechIds?:ReadonlySet<string>):PatternFamily[] {
   const counts=new Map<string,number>();
   for(const tech of catalog){
+    if(allowedTechIds&&!allowedTechIds.has(tech.id)) continue;
     for(const pattern of tech.patterns){
       if(!pattern.concept) continue;
       counts.set(pattern.concept,(counts.get(pattern.concept)||0)+1);
