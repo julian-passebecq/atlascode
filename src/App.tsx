@@ -52,6 +52,7 @@ const modes:{id:Mode;label:string}[]=[
   {id:"practice",label:"Practice"},
   {id:"updates",label:"What’s new"}
 ];
+const validModes=new Set<Mode>(modes.map(mode=>mode.id));
 
 function makeWorkspace(id:string=crypto.randomUUID(),techId:string="python"):Workspace{
   return {
@@ -79,6 +80,8 @@ function loadWorkspaces():Workspace[]{
         && typeof candidate.left.mode==="string"
         && typeof candidate.right.techId==="string"
         && typeof candidate.right.mode==="string"
+        && validModes.has(candidate.left.mode as Mode)
+        && validModes.has(candidate.right.mode as Mode)
         && byId.has(candidate.left.techId)
         && byId.has(candidate.right.techId);
     });
