@@ -9,7 +9,7 @@ const catalog = JSON.parse(
 const requiredTechnologies = [
   "airflow","spark","pyspark","dbt","python","pandas","polars","duckdb","delta",
   "sql","bigquery","snowflake","tsql","mysql","postgres","fastapi","kubernetes",
-  "linux","powershell","dax","excel","docker","git"
+  "linux","powershell","dax","excel","docker","git","bash","fabric","databricks"
 ];
 
 test("catalog metadata is versioned", () => {
@@ -23,6 +23,42 @@ test("all requested core technologies are represented", () => {
   for (const id of requiredTechnologies) {
     assert.ok(ids.has(id), "missing technology: " + id);
   }
+});
+
+
+test("learning tracks are valid and cover the intended study paths", () => {
+  const validTracks = new Set([
+    "data-analyst",
+    "data-engineering",
+    "bi-warehousing",
+    "cloud-lakehouse",
+    "devops"
+  ]);
+
+  const byId = new Map(catalog.technologies.map(tech => [tech.id, tech]));
+  const coverage = new Map([...validTracks].map(track => [track, 0]));
+
+  for (const tech of catalog.technologies) {
+    assert.ok(Array.isArray(tech.tracks) && tech.tracks.length > 0, tech.id + " needs at least one learning track");
+    assert.equal(new Set(tech.tracks).size, tech.tracks.length, tech.id + " has duplicate learning tracks");
+
+    for (const track of tech.tracks) {
+      assert.ok(validTracks.has(track), tech.id + " has invalid track: " + track);
+      coverage.set(track, coverage.get(track) + 1);
+    }
+  }
+
+  for (const [track, count] of coverage) {
+    assert.ok(count >= 4, track + " needs useful technology coverage");
+  }
+
+  assert.ok(byId.get("pandas").tracks.includes("data-analyst"));
+  assert.ok(byId.get("airflow").tracks.includes("data-engineering"));
+  assert.ok(byId.get("dbt").tracks.includes("bi-warehousing"));
+  assert.ok(byId.get("fabric").tracks.includes("cloud-lakehouse"));
+  assert.ok(byId.get("databricks").tracks.includes("cloud-lakehouse"));
+  assert.ok(byId.get("bash").tracks.includes("devops"));
+  assert.ok(byId.get("kubernetes").tracks.includes("devops"));
 });
 
 test("technology ids and pattern ids are unique", () => {
