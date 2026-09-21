@@ -14,7 +14,7 @@
 .apiGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.apiCard{padding:14px!important}.apiTop{display:flex;align-items:center;justify-content:space-between;gap:8px}.apiCard p{color:var(--muted);font-size:12px;line-height:1.45}.miniExample{padding:8px 10px;border-radius:5px;background:var(--surface-2);font:11px "Cascadia Code",monospace;overflow-wrap:anywhere}.practiceCard,.updateCard{padding:14px!important}.practiceHead{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.practiceHead p,.updateCard p{margin:6px 0;color:var(--muted);line-height:1.5;font-size:12px}.practiceReveal,.impact{margin-top:10px;padding:11px;border-left:3px solid var(--accent);background:var(--accent-soft);font-size:12px}.practiceReveal p{margin:7px 0 0}.updateMeta{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);margin-bottom:9px}
 .compact .contentColumn{padding-top:12px;gap:12px}.compact .paneHeader{padding-top:10px}.compact pre{padding:10px 12px;line-height:1.42}.compact .patternHead{padding:10px 12px}.compact .memoCard,.compact .apiCard{min-height:0;padding:9px!important}
 @media(max-width:1000px){.topbar{grid-template-columns:210px 1fr auto}.topActions .fui-Switch__label{display:none}.shell{grid-template-columns:220px minmax(0,1fr)}.reader.split{grid-template-columns:1fr;overflow:auto}.reader.split .pane{min-height:70vh}}
-@media(max-width:760px){.topbar{grid-template-columns:1fr auto}.topSearch{display:none}.shell{grid-template-columns:1fr}.explorer{display:none}.memoGrid,.apiGrid{grid-template-columns:1fr}.contentColumn{padding-left:14px;padding-right:14px}}
+@media(max-width:760px){.app{grid-template-rows:84px 42px 1fr}.topbar{grid-template-columns:1fr auto;grid-template-rows:42px 36px;gap:0 8px}.brand{grid-column:1;grid-row:1}.topActions{grid-column:2;grid-row:1}.topSearch{display:block;grid-column:1 / -1;grid-row:2}.topSearch .fui-Input{width:100%}.shell{grid-template-columns:1fr}.explorer{display:none}.memoGrid,.apiGrid{grid-template-columns:1fr}.contentColumn{padding-left:14px;padding-right:14px}}
 
 .topSearch{position:relative;z-index:20}
 .searchResults{position:absolute;top:38px;left:0;right:0;max-height:min(520px,70vh);overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.18);padding:6px}
@@ -47,7 +47,7 @@
 .reviewActions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
 
 @media(max-width:760px){
-  .searchResults{position:fixed;top:49px;left:8px;right:8px}
+  .searchResults{position:fixed;top:84px;left:8px;right:8px}
   .reviewPage{padding:18px 14px 60px}
   .reviewHeader,.reviewCardTop{flex-direction:column}
   .reviewActions{justify-content:flex-start}
