@@ -1,7 +1,8 @@
 import { catalog, Mode, Pattern } from "../content/catalog";
+import { updates } from "../content/updates";
 
 export type SearchResult = {
-  kind:"technology"|"pattern"|"api";
+  kind:"technology"|"pattern"|"api"|"update";
   id:string;
   techId:string;
   techName:string;
@@ -22,7 +23,7 @@ const normalize = (value:string) =>
 
 const includesAll = (text:string, words:string[]) => words.every(word => text.includes(word));
 
-export function knowledgeDomId(kind:"pattern"|"api",id:string){
+export function knowledgeDomId(kind:"pattern"|"api"|"update",id:string){
   return "knowledge-"+kind+"-"+encodeURIComponent(id);
 }
 
@@ -66,6 +67,21 @@ export function searchKnowledge(query:string, limit=12):SearchResult[] {
         kind:"api",id:tech.id+":"+api.name,techId:tech.id,techName:tech.name,
         title:api.name,subtitle:api.whatFor,mode:"apis",
         score:55 + words.reduce((sum,w)=>sum+(name.includes(w)?20:0),0)
+      });
+    }
+
+    for(const update of updates.filter(entry=>entry.techId===tech.id)){
+      const text=normalize([
+        update.version,update.title,update.summary,update.impact,
+        update.kind,update.publishedAt,tech.name
+      ].join(" "));
+      if(!includesAll(text,words)) continue;
+      const version=normalize(update.version);
+      const title=normalize(update.title);
+      hits.push({
+        kind:"update",id:update.id,techId:tech.id,techName:tech.name,
+        title:update.title,subtitle:"v"+update.version+" · "+update.publishedAt,mode:"updates",
+        score:60 + words.reduce((sum,w)=>sum+(version===w?35:0)+(title.includes(w)?12:0),0)
       });
     }
   }
