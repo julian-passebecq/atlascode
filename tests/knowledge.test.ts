@@ -99,10 +99,17 @@ describe("learning tracks", () => {
   });
 
   it("scopes pattern-family counts to the active track", () => {
-    const devopsFamilies=patternFamilies(technologyIdsForTrack("devops"));
+    const devopsIds=technologyIdsForTrack("devops");
+    const devopsFamilies=patternFamilies(devopsIds);
     expect(devopsFamilies.some(family=>family.concept==="pipeline-filter" && family.count>=2)).toBe(true);
     expect(devopsFamilies.some(family=>family.concept==="script-failure-boundary" && family.count>=2)).toBe(true);
     expect(devopsFamilies.some(family=>family.concept==="latest-row")).toBe(false);
+
+    expect(patternsForConcept("latest-row",devopsIds)).toEqual([]);
+
+    const cloudIds=technologyIdsForTrack("cloud-lakehouse");
+    expect(new Set(patternsForConcept("medallion-layers",cloudIds).map(item=>item.techId)))
+      .toEqual(new Set(["databricks","fabric"]));
   });
 });
 
@@ -170,6 +177,18 @@ describe("relatedPatterns", () => {
     const python=byId.get("python")!;
     const pattern=python.patterns.find(item=>!item.concept)!;
     expect(relatedPatterns(pattern)).toEqual([]);
+  });
+
+  it("scopes same-pattern links to the active learning track", () => {
+    const bash=byId.get("bash")!;
+    const source=bash.patterns.find(pattern=>pattern.concept==="pipeline-filter")!;
+    const devopsIds=technologyIdsForTrack("devops");
+    const related=relatedPatterns(source,devopsIds);
+
+    expect(new Set(related.map(item=>item.techId))).toEqual(new Set(["powershell"]));
+
+    const analystIds=technologyIdsForTrack("data-analyst");
+    expect(relatedPatterns(source,analystIds)).toEqual([]);
   });
 });
 
