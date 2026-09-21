@@ -8,7 +8,8 @@ import {
   patternFamilies,
   patternsForConcept,
   relatedPatterns,
-  searchKnowledge
+  searchKnowledge,
+  technologyIdsForTrack
 } from "../src/core/knowledge";
 
 describe("searchKnowledge", () => {
@@ -55,6 +56,53 @@ describe("searchKnowledge", () => {
     const [first]=searchKnowledge("pandas", 5);
     expect(first?.kind).toBe("technology");
     expect(first?.techId).toBe("pandas");
+  });
+});
+
+describe("learning tracks", () => {
+  it("organizes technologies into the intended study paths", () => {
+    const analyst=technologyIdsForTrack("data-analyst");
+    expect(analyst.has("python")).toBe(true);
+    expect(analyst.has("pandas")).toBe(true);
+    expect(analyst.has("sql")).toBe(true);
+
+    const engineering=technologyIdsForTrack("data-engineering");
+    for(const id of ["airflow","polars","pyspark","fabric","databricks"]){
+      expect(engineering.has(id)).toBe(true);
+    }
+
+    const bi=technologyIdsForTrack("bi-warehousing");
+    for(const id of ["dbt","dax","snowflake","fabric"]){
+      expect(bi.has(id)).toBe(true);
+    }
+
+    const cloud=technologyIdsForTrack("cloud-lakehouse");
+    for(const id of ["fabric","databricks","spark","delta"]){
+      expect(cloud.has(id)).toBe(true);
+    }
+
+    const devops=technologyIdsForTrack("devops");
+    for(const id of ["kubernetes","docker","git","bash","linux","powershell"]){
+      expect(devops.has(id)).toBe(true);
+    }
+    expect(devops.has("pandas")).toBe(false);
+  });
+
+  it("makes track names searchable as technology metadata", () => {
+    const devops=matchingTechnologyIds("devops");
+    expect(devops.has("bash")).toBe(true);
+    expect(devops.has("kubernetes")).toBe(true);
+
+    const cloud=matchingTechnologyIds("cloud lakehouse");
+    expect(cloud.has("fabric")).toBe(true);
+    expect(cloud.has("databricks")).toBe(true);
+  });
+
+  it("scopes pattern-family counts to the active track", () => {
+    const devopsFamilies=patternFamilies(technologyIdsForTrack("devops"));
+    expect(devopsFamilies.some(family=>family.concept==="pipeline-filter" && family.count>=2)).toBe(true);
+    expect(devopsFamilies.some(family=>family.concept==="script-failure-boundary" && family.count>=2)).toBe(true);
+    expect(devopsFamilies.some(family=>family.concept==="latest-row")).toBe(false);
   });
 });
 
