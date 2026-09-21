@@ -2,18 +2,20 @@ import React from "react";
 import { Badge, Button, Card, Text, Tooltip } from "@fluentui/react-components";
 import { Copy24Regular, Star24Filled, Star24Regular } from "@fluentui/react-icons";
 import { Pattern } from "../content/catalog";
-import { relatedPatterns } from "../core/knowledge";
+import { knowledgeDomId, relatedPatterns } from "../core/knowledge";
 
 export function PatternCard({
   pattern,
   favorite,
   onToggleFavorite,
-  onOpenRelated
+  onOpenRelated,
+  focused=false
 }:{
   pattern:Pattern;
   favorite:boolean;
   onToggleFavorite:()=>void;
-  onOpenRelated:(techId:string)=>void;
+  onOpenRelated:(techId:string,patternId:string)=>void;
+  focused?:boolean;
 }){
   const [copied,setCopied]=React.useState(false);
   const related=relatedPatterns(pattern);
@@ -28,7 +30,7 @@ export function PatternCard({
     }
   };
 
-  return <Card className="patternCard">
+  return <Card id={knowledgeDomId("pattern",pattern.id)} className={focused?"patternCard knowledgeFocused":"patternCard"}>
     <div className="patternHead">
       <div>
         <div className="patternTitle">
@@ -55,7 +57,7 @@ export function PatternCard({
       <div className="relatedLabel">Same pattern in</div>
       <div className="relatedLinks">
         {related.slice(0,8).map(item=>
-          <button key={item.techId+":"+item.pattern.id} onClick={()=>onOpenRelated(item.techId)}>
+          <button key={item.techId+":"+item.pattern.id} onClick={()=>onOpenRelated(item.techId,item.pattern.id)}>
             {item.techName}
           </button>
         )}
